@@ -1,0 +1,34 @@
+\name{fit_P1_precision_L1}
+\alias{fit_P1_precision_L1}
+\title{Precision-weighted L1 penalty (P1)}
+\usage{
+fit_P1_precision_L1(dat, xnames = NULL, lambda,
+                    delta_bounds = DEFAULT_DELTA_BOUNDS,
+                    full_fit = NULL, robust = FALSE,
+                    eps = SMOOTH_EPS)
+}
+\arguments{
+\item{dat}{A data frame from \code{\link{simulate_hybrid_cox}} or
+  conforming to its column conventions.}
+\item{xnames}{Character vector of covariate names. If \code{NULL},
+  automatically detected.}
+\item{lambda}{Penalty strength.}
+\item{delta_bounds}{Optimization interval for \eqn{\delta}.}
+\item{full_fit}{Optional pre-computed full Cox fit.}
+\item{robust}{Use robust (Lin-Wei) Cox standard errors.}
+\item{eps}{Smoothing parameter for \eqn{|\delta|_\varepsilon}.}
+}
+\value{
+A list of estimates and inference quantities, including the
+effective penalty weight \code{w} and the first-stage standard
+error \code{se_delta}.
+}
+\description{
+Implements
+\eqn{p_\lambda(\delta) = \lambda |\delta| / \widehat{SE}(\hat\delta_0)},
+where \eqn{\widehat{SE}(\hat\delta_0)} is the standard error of the
+unpenalized drift estimator. Shrinkage is applied to the standardized
+drift magnitude, so for a fixed \eqn{\lambda}, deviations from zero
+are penalized more strongly when the drift parameter is estimated
+precisely.
+}

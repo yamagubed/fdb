@@ -1,0 +1,45 @@
+\name{fit_one_penalized_method}
+\alias{fit_one_penalized_method}
+\title{Fit a single penalized borrowing method}
+\usage{
+fit_one_penalized_method(dat,
+                         method = c("Li", "P1", "P2", "P3", "P4"),
+                         lambda,
+                         gamma_li = 1,
+                         gate_c = 1.64,
+                         gate_tau = 0.25,
+                         gamma_mcp = 3,
+                         delta_bounds = DEFAULT_DELTA_BOUNDS,
+                         robust = FALSE,
+                         eps = SMOOTH_EPS,
+                         n_grid_opt = DEFAULT_N_GRID_OPT)
+}
+\arguments{
+\item{dat}{A data frame conforming to the column conventions of
+  \code{\link{simulate_hybrid_cox}}.}
+\item{method}{One of \code{"Li"}, \code{"P1"}, \code{"P2"},
+  \code{"P3"}, \code{"P4"}.}
+\item{lambda}{Penalty strength.}
+\item{gamma_li}{Exponent for the adaptive lasso weight (Li method).}
+\item{gate_c, gate_tau}{Threshold and smoothness for the P2 gate.}
+\item{gamma_mcp}{MCP shape parameter for P3.}
+\item{delta_bounds}{Optimization interval for \eqn{\delta}.}
+\item{robust}{Use robust (Lin-Wei) Cox standard errors.}
+\item{eps}{Smoothing parameter for \eqn{|\delta|_\varepsilon}.}
+\item{n_grid_opt}{Number of grid points for the coarse search
+  (used by P2 and P3).}
+}
+\value{
+A list of estimates and inference quantities (same format as the
+underlying fit functions).
+}
+\description{
+Dispatches to the appropriate user-facing fit function for one of
+the implemented penalized borrowing methods.
+}
+\examples{
+set.seed(1)
+sim <- simulate_hybrid_cox(nI1 = 100, nI0 = 100, nE = 200,
+                           theta0 = log(0.8), delta0 = 0)
+fit_one_penalized_method(sim$data, method = "P1", lambda = 0.2)
+}

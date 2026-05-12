@@ -1,0 +1,34 @@
+\name{compute_ess_from_raw}
+\alias{compute_ess_from_raw}
+\title{Compute effective sample size from raw simulation output}
+\usage{
+compute_ess_from_raw(raw_df, NS,
+                     ref_method = "InternalOnly",
+                     methods_exclude = NULL)
+}
+\arguments{
+\item{raw_df}{A data frame with at least \code{method} and
+  \code{theta_hat} columns.}
+\item{NS}{Internal-control sample size used as the scaling factor.}
+\item{ref_method}{Name of the reference method (default
+  \code{"InternalOnly"}).}
+\item{methods_exclude}{Optional character vector of methods to exclude
+  from the output.}
+}
+\value{
+A data frame with \code{method} and \code{ESS} columns.
+}
+\description{
+Computes a variance-ratio effective sample size for each method
+relative to a reference method (typically internal-only), based on
+the Monte Carlo variance of the treatment effect estimator across
+replicates:
+\eqn{ESS_m = NS \cdot (Var_{ref} / Var_m - 1)}.
+}
+\examples{
+\donttest{
+sim_out <- run_simulation(nsim = 50, scenario = scenario_S1,
+                          lambdas = lambdas_default, alpha = 0.025, seed = 1)
+compute_ess_from_raw(sim_out$raw, NS = 300)
+}
+}

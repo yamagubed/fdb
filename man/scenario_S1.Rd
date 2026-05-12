@@ -1,0 +1,19 @@
+\name{scenario_S1}
+\alias{scenario_S1}
+\docType{data}
+\title{Example simulation scenario}
+\format{
+A list with elements \code{nI1}, \code{nI0}, \code{nE}, \code{theta0},
+\code{delta0}, \code{p}, \code{beta}, \code{rho}, \code{cov_shift},
+\code{shape}, \code{lambda}, and \code{target_cens}.
+}
+\usage{
+scenario_S1
+}
+\description{
+A reference scenario used in the examples and unit tests. Provides
+150 internal treated, 150 internal concurrent control, and 300
+external control subjects, with 5 correlated covariates and a
+Weibull baseline.
+}
+\keyword{datasets}

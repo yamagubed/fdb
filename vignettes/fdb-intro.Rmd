@@ -1,0 +1,99 @@
+---
+title: "Getting started with fdb"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with fdb}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+# Overview
+
+The `fdb` package implements likelihood-informed frequentist dynamic borrowing
+methods for hybrid-control survival trials. The borrowing strength is governed
+by a single tuning parameter, $\lambda$, acting on a drift parameter $\delta$
+that captures population shift between concurrent and external controls under
+a Cox proportional hazards model.
+
+This vignette walks through:
+
+1. Simulating a hybrid-control dataset;
+2. Fitting all borrowing methods on a single dataset;
+3. Running a small Monte Carlo study;
+4. Performing design-stage $\lambda$ calibration with the one-stop wrapper.
+
+All chunks below are set to `eval = FALSE` so that the vignette builds quickly
+on CRAN. Run them interactively or with `eval = TRUE` to reproduce.
+
+# 1. Simulate a hybrid-control trial
+
+```{r}
+library(fdb)
+
+set.seed(1)
+sim <- simulate_hybrid_cox(
+  nI1 = 150, nI0 = 150, nE = 300,
+  theta0 = log(0.8), delta0 = log(1.1),
+  p = 5, beta = rep(0.2, 5)
+)
+head(sim$data)
+```
+
+The simulated data frame has columns `time`, `status`, `T` (treatment
+indicator), `Z` (external-control indicator), and `X1, ..., Xp` (covariates).
+
+# 2. Fit all borrowing methods on one dataset
+
+```{r}
+res <- fit_all_methods(
+  sim$data,
+  lambda_li = 0.2, lambda_p1 = 0.2,
+  lambda_p2 = 0.2, lambda_p3 = 0.2, lambda_p4 = 0.2
+)
+res
+```
+
+The returned data frame reports both model-based standard errors (`se_theta`)
+and penalized estimating-equation sandwich standard errors (`se_sand`).
+
+# 3. Monte Carlo study under a fixed scenario
+
+```{r}
+sim_out <- run_simulation(
+  nsim = 100, scenario = scenario_S1,
+  lambdas = lambdas_default,
+  alpha = 0.025, seed = 1
+)
+subset(sim_out$summary, inference == "sandwich")
+```
+
+# 4. Design-stage $\lambda$ calibration
+
+```{r}
+study <- run_fdb_study(
+  scenario_base   = scenario_S1,
+  drift_hr_range  = c(0.8, 1.2),
+  drift_by_hr     = 0.1,
+  alpha           = 0.025,
+  alt_hr          = 0.8,
+  do_calibration  = TRUE,
+  nsim_cal        = 300,
+  nsim_curve      = 500,
+  parallel        = FALSE,
+  seed            = 1
+)
+study$calibration$lambda_star
+study$type1_curve
+study$power_curve
+```
+
+For production runs, use larger `nsim_cal` and `nsim_curve`, and enable
+`parallel = TRUE` together with `ncores`.

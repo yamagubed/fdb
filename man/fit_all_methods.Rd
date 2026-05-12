@@ -1,0 +1,48 @@
+\name{fit_all_methods}
+\alias{fit_all_methods}
+\title{Fit all borrowing methods on a single dataset}
+\usage{
+fit_all_methods(dat,
+                lambda_li = 0.2, gamma_li = 1,
+                lambda_p1 = 0.2,
+                lambda_p2 = 0.2, gate_c = 1.64, gate_tau = 0.25,
+                lambda_p3 = 0.2, gamma_mcp = 3,
+                lambda_p4 = 0.2,
+                delta_bounds = DEFAULT_DELTA_BOUNDS,
+                robust = FALSE,
+                eps = SMOOTH_EPS,
+                n_grid_opt = DEFAULT_N_GRID_OPT)
+}
+\arguments{
+\item{dat}{A data frame from \code{\link{simulate_hybrid_cox}} or
+  conforming to its column conventions.}
+\item{lambda_li, gamma_li}{Tuning for the adaptive lasso method.}
+\item{lambda_p1}{Tuning for the precision-weighted L1 (P1).}
+\item{lambda_p2, gate_c, gate_tau}{Tuning for the smooth evidence-gated
+  L1 (P2).}
+\item{lambda_p3, gamma_mcp}{Tuning for the information-adaptive MCP (P3).}
+\item{lambda_p4}{Tuning for the likelihood-ratio-weighted L1 (P4).}
+\item{delta_bounds}{Optimization interval for \eqn{\delta}.}
+\item{robust}{Use robust (Lin-Wei) Cox standard errors.}
+\item{eps}{Smoothing parameter for \eqn{|\delta|_\varepsilon}.}
+\item{n_grid_opt}{Number of grid points for the coarse search in
+  non-convex objectives (P2 and P3).}
+}
+\value{
+A data frame with one row per method, columns \code{method},
+\code{theta_hat}, \code{se_theta} (model-based), \code{se_sand}
+(sandwich), \code{z}, \code{z_sand}, \code{delta_hat}, \code{pen_curv},
+\code{pen_curv_raw}.
+}
+\description{
+Convenience wrapper that fits internal-only, naive pooled, Li
+adaptive lasso, and all four likelihood-informed penalties (P1-P4)
+on a single hybrid-control dataset and returns a tidy data frame of
+results. Both model-based and sandwich standard errors are reported.
+}
+\examples{
+set.seed(1)
+sim <- simulate_hybrid_cox(nI1 = 100, nI0 = 100, nE = 200,
+                           theta0 = log(0.8), delta0 = 0)
+fit_all_methods(sim$data)
+}

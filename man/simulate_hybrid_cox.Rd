@@ -1,0 +1,49 @@
+\name{simulate_hybrid_cox}
+\alias{simulate_hybrid_cox}
+\title{Simulate a hybrid-control Cox proportional hazards dataset}
+\usage{
+simulate_hybrid_cox(nI1 = 150, nI0 = 150, nE = 300,
+                    theta0 = 0, delta0 = 0,
+                    p = 5, beta = NULL,
+                    rho = 0,
+                    cov_shift = rep(0, p),
+                    shape = 1.2, lambda = 0.02,
+                    target_cens = 0.2)
+}
+\arguments{
+\item{nI1}{Number of internal randomized treated subjects.}
+\item{nI0}{Number of internal randomized concurrent control subjects.}
+\item{nE}{Number of external control subjects.}
+\item{theta0}{True treatment effect (log hazard ratio).}
+\item{delta0}{True population drift on the log-HR scale.}
+\item{p}{Number of covariates.}
+\item{beta}{Numeric vector of covariate coefficients (length \code{p}).
+  Defaults to \code{rep(0.2, p)}.}
+\item{rho}{Equicorrelation of covariates.}
+\item{cov_shift}{Covariate mean shift in the external control arm
+  (numeric vector of length \code{p}).}
+\item{shape}{Weibull shape parameter for event-time generation.}
+\item{lambda}{Baseline scale parameter for event-time generation.}
+\item{target_cens}{Target right-censoring proportion.}
+}
+\value{
+A list with components \code{data} (a data frame with columns
+\code{time}, \code{status}, \code{T}, \code{Z}, \code{X1}, ...,
+\code{Xp}), \code{truth} (the true parameters), and \code{settings}
+(the simulation settings including the calibrated censoring rate).
+}
+\description{
+Generates a randomized trial augmented with an external control arm,
+under a Cox proportional hazards model
+\deqn{h(t \mid T,Z,X) = h_0(t)\,\exp(\theta T + \delta Z + \beta^\top X),}
+where \eqn{T} is the treatment indicator, \eqn{Z} is the external-control
+indicator, \eqn{X} is a vector of baseline covariates, \eqn{\theta} is
+the treatment effect, and \eqn{\delta} is the population drift between
+concurrent and external controls.
+}
+\examples{
+set.seed(1)
+sim <- simulate_hybrid_cox(nI1 = 100, nI0 = 100, nE = 200,
+                           theta0 = log(0.8), delta0 = 0)
+head(sim$data)
+}

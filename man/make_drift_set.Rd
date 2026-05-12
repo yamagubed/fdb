@@ -1,0 +1,29 @@
+\name{make_drift_set}
+\alias{make_drift_set}
+\alias{make_drift_set_from_values}
+\alias{drift_set}
+\title{Drift set utilities}
+\usage{
+make_drift_set(drift_hr_range = c(0.8, 1.2),
+               by_hr = 0.05,
+               include_zero = TRUE)
+
+make_drift_set_from_values(drift_hr_values, include_zero = TRUE)
+}
+\arguments{
+\item{drift_hr_range}{Numeric vector of length 2 giving the inclusive
+  range of drift HR values (e.g. \code{c(0.8, 1.2)}).}
+\item{by_hr}{Step size in HR units.}
+\item{include_zero}{If \code{TRUE}, ensure the null drift
+  (\eqn{\delta = 0}) is included.}
+\item{drift_hr_values}{Numeric vector of drift HR values.}
+}
+\value{
+A numeric vector of drift values on the log-HR scale.
+}
+\description{
+\code{make_drift_set} builds a regular grid of drift values from a
+range and step in HR units, optionally including the null drift
+(\code{HR = 1}). \code{make_drift_set_from_values} converts a
+user-supplied set of drift HR values to log-HR.
+}
