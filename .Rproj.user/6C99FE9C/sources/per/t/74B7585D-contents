@@ -560,152 +560,227 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
 #' Performs a coarse-grid calibration on a reduced drift set
 #' (\code{drift_set_cal}), refines the grid around the calibrated
 #' lambda, repeats the fine-grid calibration on \code{drift_set_cal},
-#' and optionally confirms the final lambda on a wider drift set
-#' \code{drift_set_confirm}.
+#' and optionally performs a confirmation stage on the same calibration
+#' drift set. The argument \code{confirm_full_drift} is retained for
+#' backward compatibility, but when \code{TRUE} the confirmation stage
+#' uses \code{drift_set_cal}, not \code{drift_set_confirm}. Thus, the
+#' final selected lambda is calibrated to the drift range specified by
+#' \code{drift_set_cal}.
 #'
 #' @param method One of \code{"Li"}, \code{"P1"}, \code{"P2"},
-#'   \code{"P3"}, \code{"P4"}.
+#' \code{"P3"}, \code{"P4"}.
 #' @param lambda_grid_coarse Initial coarse lambda grid.
 #' @param scenario_base A scenario list.
-#' @param drift_set_cal Reduced drift set for calibration.
-#' @param drift_set_confirm Wider drift set for confirmation
-#'   (defaults to \code{NULL}, which disables confirmation).
+#' @param drift_set_cal Drift set used for calibration and confirmation.
+#' @param drift_set_confirm Deprecated for final lambda selection; retained
+#' for backward compatibility.
 #' @param nsim_cal Replicates per drift value in the calibration stages.
-#' @param nsim_confirm Replicates per drift value in the confirmation
-#'   stage.
+#' @param nsim_confirm Replicates per drift value in the confirmation stage.
 #' @param alpha,alpha_cal Nominal level and calibration threshold.
-#' @param seed RNG seed (subsequent stages use offsets of this seed).
+#' @param seed RNG seed.
 #' @param parallel,ncores Parallelization controls.
 #' @param robust,eps,gamma_li,gate_c,gate_tau,gamma_mcp,delta_bounds,n_grid_opt
-#'   Same as in \code{\link{calibrate_lambda_grid}}.
+#' Same as in \code{\link{calibrate_lambda_grid}}.
 #' @param n_fine Number of points in the fine lambda grid.
-#' @param primary_inference Which inference type drives the
-#'   refinement (default \code{"sandwich"}).
-#' @param confirm_full_drift Logical; perform the confirmation stage
-#'   on \code{drift_set_confirm}.
+#' @param primary_inference Which inference type drives refinement.
+#' @param confirm_full_drift Logical; if \code{TRUE}, perform a confirmation
+#' stage using \code{drift_set_cal}.
 #' @param early_stop_drift,stop_rule,select_rule As in
-#'   \code{\link{calibrate_lambda_grid}}.
+#' \code{\link{calibrate_lambda_grid}}.
 #' @return A list with components \code{method}, \code{coarse},
-#'   \code{fine}, \code{confirm}, \code{calibration_summary},
-#'   \code{calibration_table}, \code{lambda_star}, and
-#'   \code{final_stage}.
+#' \code{fine}, \code{confirm}, \code{calibration_summary},
+#' \code{calibration_table}, \code{lambda_star}, and
+#' \code{final_stage}.
 #' @export
-calibrate_lambda_grid_two_stage <- function(method = c("Li", "P1", "P2", "P3", "P4"),
-                                            lambda_grid_coarse,
-                                            scenario_base,
-                                            drift_set_cal,
-                                            drift_set_confirm = NULL,
-                                            nsim_cal = 300,
-                                            nsim_confirm = nsim_cal,
-                                            alpha = 0.025,
-                                            alpha_cal = alpha,
-                                            seed = 1,
-                                            parallel = FALSE,
-                                            ncores = NULL,
-                                            robust = FALSE,
-                                            eps = SMOOTH_EPS,
-                                            gamma_li = 1,
-                                            gate_c = 1.64,
-                                            gate_tau = 0.25,
-                                            gamma_mcp = 3,
-                                            delta_bounds = DEFAULT_DELTA_BOUNDS,
-                                            n_grid_opt = DEFAULT_N_GRID_OPT,
-                                            n_fine = 6,
-                                            primary_inference = c("sandwich", "model_based"),
-                                            confirm_full_drift = TRUE,
-                                            early_stop_drift = TRUE,
-                                            stop_rule = c("point", "upper95"),
-                                            select_rule = c("point", "upper95")) {
+calibrate_lambda_grid_two_stage <- function(
+    method = c("Li", "P1", "P2", "P3", "P4"),
+    lambda_grid_coarse,
+    scenario_base,
+    drift_set_cal,
+    drift_set_confirm = NULL,
+    nsim_cal = 300,
+    nsim_confirm = nsim_cal,
+    alpha = 0.025,
+    alpha_cal = alpha,
+    seed = 1,
+    parallel = FALSE,
+    ncores = NULL,
+    robust = FALSE,
+    eps = SMOOTH_EPS,
+    gamma_li = 1,
+    gate_c = 1.64,
+    gate_tau = 0.25,
+    gamma_mcp = 3,
+    delta_bounds = DEFAULT_DELTA_BOUNDS,
+    n_grid_opt = DEFAULT_N_GRID_OPT,
+    n_fine = 6,
+    primary_inference = c("sandwich", "model_based"),
+    confirm_full_drift = TRUE,
+    early_stop_drift = TRUE,
+    stop_rule = c("point", "upper95"),
+    select_rule = c("point", "upper95")
+) {
   method <- match.arg(method)
   primary_inference <- match.arg(primary_inference)
   stop_rule <- match.arg(stop_rule)
   select_rule <- match.arg(select_rule)
 
+  # ---------------------------------------------------------------------------
+  # Stage 1: coarse calibration on the user-specified calibration drift set
+  # ---------------------------------------------------------------------------
+
   stage1 <- calibrate_lambda_grid(
-    method = method, lambda_grid = lambda_grid_coarse,
-    scenario_base = scenario_base, drift_set = drift_set_cal,
-    nsim = nsim_cal, alpha = alpha, alpha_cal = alpha_cal,
-    seed = seed + 11, parallel = parallel, ncores = ncores,
-    robust = robust, eps = eps,
-    gamma_li = gamma_li, gate_c = gate_c, gate_tau = gate_tau,
-    gamma_mcp = gamma_mcp, delta_bounds = delta_bounds,
-    n_grid_opt = n_grid_opt, early_stop_drift = early_stop_drift,
-    stop_rule = stop_rule, select_rule = select_rule
+    method = method,
+    lambda_grid = lambda_grid_coarse,
+    scenario_base = scenario_base,
+    drift_set = drift_set_cal,
+    nsim = nsim_cal,
+    alpha = alpha,
+    alpha_cal = alpha_cal,
+    seed = seed + 11,
+    parallel = parallel,
+    ncores = ncores,
+    robust = robust,
+    eps = eps,
+    gamma_li = gamma_li,
+    gate_c = gate_c,
+    gate_tau = gate_tau,
+    gamma_mcp = gamma_mcp,
+    delta_bounds = delta_bounds,
+    n_grid_opt = n_grid_opt,
+    early_stop_drift = early_stop_drift,
+    stop_rule = stop_rule,
+    select_rule = select_rule
   )
-  stage1$summary$stage <- "coarse_reduced_drift"
-  stage1$calibration_table$stage <- "coarse_reduced_drift"
+
+  stage1$summary$stage <- "coarse_calibration_drift"
+  stage1$calibration_table$stage <- "coarse_calibration_drift"
 
   primary_star1 <- stage1$lambda_star$lambda_star[
     stage1$lambda_star$inference == primary_inference
   ]
-  lambda_grid_fine <- .make_refined_lambda_grid(lambda_grid_coarse,
-                                                primary_star1,
-                                                n_fine = n_fine)
+
+  lambda_grid_fine <- .make_refined_lambda_grid(
+    lambda_grid = lambda_grid_coarse,
+    lambda_star = primary_star1,
+    n_fine = n_fine
+  )
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: fine calibration on the same calibration drift set
+  # ---------------------------------------------------------------------------
 
   stage2 <- calibrate_lambda_grid(
-    method = method, lambda_grid = lambda_grid_fine,
-    scenario_base = scenario_base, drift_set = drift_set_cal,
-    nsim = nsim_cal, alpha = alpha, alpha_cal = alpha_cal,
-    seed = seed + 22, parallel = parallel, ncores = ncores,
-    robust = robust, eps = eps,
-    gamma_li = gamma_li, gate_c = gate_c, gate_tau = gate_tau,
-    gamma_mcp = gamma_mcp, delta_bounds = delta_bounds,
-    n_grid_opt = n_grid_opt, early_stop_drift = early_stop_drift,
-    stop_rule = stop_rule, select_rule = select_rule
+    method = method,
+    lambda_grid = lambda_grid_fine,
+    scenario_base = scenario_base,
+    drift_set = drift_set_cal,
+    nsim = nsim_cal,
+    alpha = alpha,
+    alpha_cal = alpha_cal,
+    seed = seed + 22,
+    parallel = parallel,
+    ncores = ncores,
+    robust = robust,
+    eps = eps,
+    gamma_li = gamma_li,
+    gate_c = gate_c,
+    gate_tau = gate_tau,
+    gamma_mcp = gamma_mcp,
+    delta_bounds = delta_bounds,
+    n_grid_opt = n_grid_opt,
+    early_stop_drift = early_stop_drift,
+    stop_rule = stop_rule,
+    select_rule = select_rule
   )
-  stage2$summary$stage <- "fine_reduced_drift"
-  stage2$calibration_table$stage <- "fine_reduced_drift"
+
+  stage2$summary$stage <- "fine_calibration_drift"
+  stage2$calibration_table$stage <- "fine_calibration_drift"
 
   final_stage <- stage2
   confirm <- NULL
-  if (isTRUE(confirm_full_drift) && !is.null(drift_set_confirm)) {
+
+  if (isTRUE(confirm_full_drift)) {
     primary_star2 <- stage2$lambda_star$lambda_star[
       stage2$lambda_star$inference == primary_inference
     ]
+
     if (is.finite(primary_star2)) {
       lambda_confirm <- sort(unique(
         lambda_grid_fine[lambda_grid_fine <= primary_star2 * (1 + 1e-12)]
       ))
-      if (length(lambda_confirm) == 0) lambda_confirm <- primary_star2
+
+      if (length(lambda_confirm) == 0) {
+        lambda_confirm <- primary_star2
+      }
     } else {
       lambda_confirm <- sort(unique(lambda_grid_fine))
     }
 
     confirm <- calibrate_lambda_grid(
-      method = method, lambda_grid = lambda_confirm,
-      scenario_base = scenario_base, drift_set = drift_set_confirm,
-      nsim = nsim_confirm, alpha = alpha, alpha_cal = alpha_cal,
-      seed = seed + 33, parallel = parallel, ncores = ncores,
-      robust = robust, eps = eps,
-      gamma_li = gamma_li, gate_c = gate_c, gate_tau = gate_tau,
-      gamma_mcp = gamma_mcp, delta_bounds = delta_bounds,
-      n_grid_opt = n_grid_opt, early_stop_drift = early_stop_drift,
-      stop_rule = stop_rule, select_rule = select_rule
+      method = method,
+      lambda_grid = lambda_confirm,
+      scenario_base = scenario_base,
+      drift_set = drift_set_cal,
+      nsim = nsim_confirm,
+      alpha = alpha,
+      alpha_cal = alpha_cal,
+      seed = seed + 33,
+      parallel = parallel,
+      ncores = ncores,
+      robust = robust,
+      eps = eps,
+      gamma_li = gamma_li,
+      gate_c = gate_c,
+      gate_tau = gate_tau,
+      gamma_mcp = gamma_mcp,
+      delta_bounds = delta_bounds,
+      n_grid_opt = n_grid_opt,
+      early_stop_drift = early_stop_drift,
+      stop_rule = stop_rule,
+      select_rule = select_rule
     )
-    confirm$summary$stage <- "confirm_full_drift"
-    confirm$calibration_table$stage <- "confirm_full_drift"
+
+    confirm$summary$stage <- "confirm_calibration_drift"
+    confirm$calibration_table$stage <- "confirm_calibration_drift"
+
     final_stage <- confirm
   }
 
   combined_summary <- do.call(
     rbind,
-    Filter(Negate(is.null),
-           list(stage1$summary, stage2$summary,
-                if (!is.null(confirm)) confirm$summary else NULL))
-  )
-  combined_table <- do.call(
-    rbind,
-    Filter(Negate(is.null),
-           list(stage1$calibration_table, stage2$calibration_table,
-                if (!is.null(confirm)) confirm$calibration_table else NULL))
+    Filter(
+      Negate(is.null),
+      list(
+        stage1$summary,
+        stage2$summary,
+        if (!is.null(confirm)) confirm$summary else NULL
+      )
+    )
   )
 
-  list(method = method,
-       coarse = stage1, fine = stage2, confirm = confirm,
-       calibration_summary = combined_summary,
-       calibration_table   = combined_table,
-       lambda_star         = final_stage$lambda_star,
-       final_stage         = final_stage)
+  combined_table <- do.call(
+    rbind,
+    Filter(
+      Negate(is.null),
+      list(
+        stage1$calibration_table,
+        stage2$calibration_table,
+        if (!is.null(confirm)) confirm$calibration_table else NULL
+      )
+    )
+  )
+
+  list(
+    method = method,
+    coarse = stage1,
+    fine = stage2,
+    confirm = confirm,
+    calibration_summary = combined_summary,
+    calibration_table = combined_table,
+    lambda_star = final_stage$lambda_star,
+    final_stage = final_stage
+  )
 }
 
 #' Calibrate lambda for all borrowing methods
