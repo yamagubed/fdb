@@ -71,6 +71,8 @@ run_simulation <- function(nsim = 200,
     }
   }
 
+  # Evaluate caller settings before sending the closure to PSOCK workers.
+  force(robust); force(eps); force(n_grid_opt); force(one_sided)
   zcrit <- stats::qnorm(alpha)
 
   sim_one_rep <- function(s) {

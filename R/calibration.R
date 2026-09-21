@@ -147,24 +147,24 @@ make_drift_set_from_values <- function(drift_hr_values,
                                              eps,
                                              n_grid_opt,
                                              rho_mcp = DEFAULT_RHO_MCP) {
+  failure <- function(lambdas, message) {
+    data.frame(lambda = lambdas, reject_mod = NA_real_,
+               reject_sand = NA_real_, fit_error = message)
+  }
   xnames <- grep("^X\\d+$", names(dat), value = TRUE)
 
   full_fit <- tryCatch(cox_fit_full(dat, xnames, robust = robust),
-                       error = function(e) NULL)
-  if (is.null(full_fit)) {
-    return(data.frame(lambda = lambda_grid,
-                      reject_mod = NA_real_,
-                      reject_sand = NA_real_))
+                       error = function(e) e)
+  if (inherits(full_fit, "error")) {
+    return(failure(lambda_grid, paste("Full Cox fit:", conditionMessage(full_fit))))
   }
 
   nodelta_fit <- NULL
   if (method == "P4") {
     nodelta_fit <- tryCatch(cox_fit_nodelta(dat, xnames, robust = robust),
-                            error = function(e) NULL)
-    if (is.null(nodelta_fit)) {
-      return(data.frame(lambda = lambda_grid,
-                        reject_mod = NA_real_,
-                        reject_sand = NA_real_))
+                            error = function(e) e)
+    if (inherits(nodelta_fit, "error")) {
+      return(failure(lambda_grid, paste("No-delta Cox fit:", conditionMessage(nodelta_fit))))
     }
   }
 
@@ -178,17 +178,19 @@ make_drift_set_from_values <- function(drift_hr_values,
         delta_bounds = delta_bounds, robust = robust, eps = eps,
         n_grid_opt = n_grid_opt
       ),
-      error = function(e) NULL
+      error = function(e) e
     )
-    if (is.null(fit)) {
-      return(data.frame(lambda = lam,
-                        reject_mod = NA_real_,
-                        reject_sand = NA_real_))
+    if (inherits(fit, "error")) {
+      return(failure(lam, paste("Penalized fit:", conditionMessage(fit))))
     }
+    valid_mod <- length(fit$z) == 1L && is.finite(fit$z)
+    valid_sand <- length(fit$z_sand) == 1L && is.finite(fit$z_sand)
     data.frame(
-      lambda      = lam,
-      reject_mod  = as.numeric(is.finite(fit$z) && fit$z < zcrit),
-      reject_sand = as.numeric(is.finite(fit$z_sand) && fit$z_sand < zcrit)
+      lambda = lam,
+      reject_mod = if (valid_mod) as.numeric(fit$z < zcrit) else NA_real_,
+      reject_sand = if (valid_sand) as.numeric(fit$z_sand < zcrit) else NA_real_,
+      fit_error = if (valid_mod && valid_sand) NA_character_ else
+        "Non-finite or missing Wald statistic"
     )
   })
 
@@ -218,6 +220,11 @@ make_drift_set_from_values <- function(drift_hr_values,
                                                n_grid_opt,
                                                cl = NULL,
                                                rho_mcp = DEFAULT_RHO_MCP) {
+  # Resolve caller expressions before serializing the worker closure.
+  # PSOCK workers do not have the caller's global CONFIG object.
+  force(method); force(lambda_grid); force(robust); force(eps)
+  force(gamma_li); force(gate_c); force(gate_tau); force(gamma_mcp)
+  force(rho_mcp); force(delta_bounds); force(n_grid_opt)
   sc <- scenario_base
   sc$theta0 <- 0
   sc$delta0 <- delta0
@@ -270,6 +277,18 @@ make_drift_set_from_values <- function(drift_hr_values,
     ))
   }
 
+  missing_mod <- !is.finite(raw$reject_mod)
+  missing_sand <- !is.finite(raw$reject_sand)
+  if (any(missing_mod | missing_sand)) {
+    reasons <- unique(raw$fit_error[!is.na(raw$fit_error)])
+    message <- sprintf(
+      "Calibration %s at drift HR %.6g: %d/%d model-based and %d/%d sandwich results missing. %s",
+      method, exp(delta0), sum(missing_mod), nrow(raw),
+      sum(missing_sand), nrow(raw), paste(head(reasons, 3), collapse = "; "))
+    if (all(missing_mod) && all(missing_sand)) stop(message, call. = FALSE)
+    warning(message, call. = FALSE)
+  }
+  rate <- function(x) if (any(is.finite(x))) mean(x, na.rm = TRUE) else NA_real_
   out <- lapply(lambda_grid, function(lam) {
     sub <- raw[abs(raw$lambda - lam) <= max(1e-12, abs(lam) * 1e-12),
                , drop = FALSE]
@@ -278,8 +297,8 @@ make_drift_set_from_values <- function(drift_hr_values,
       lambda = lam,
       delta0 = delta0,
       driftHR = exp(delta0),
-      type1_model_based = mean(sub$reject_mod, na.rm = TRUE),
-      type1_sandwich    = mean(sub$reject_sand, na.rm = TRUE),
+      type1_model_based = rate(sub$reject_mod),
+      type1_sandwich    = rate(sub$reject_sand),
       n_nonmissing_model_based = sum(is.finite(sub$reject_mod)),
       n_nonmissing_sandwich    = sum(is.finite(sub$reject_sand)),
       stringsAsFactors = FALSE
@@ -299,8 +318,14 @@ make_drift_set_from_values <- function(drift_hr_values,
   out <- lapply(lambda_vals, function(lam) {
     sub <- details_tbl[abs(details_tbl$lambda - lam) <=
                          max(1e-12, abs(lam) * 1e-12), , drop = FALSE]
-    worst_mod  <- max(sub$type1_model_based, na.rm = TRUE)
-    worst_sand <- max(sub$type1_sandwich,    na.rm = TRUE)
+    # Incomplete trials cannot establish calibration at a drift value.
+    complete_max <- function(x, n) {
+      if (!length(x) || any(!is.finite(x)) ||
+          (!is.null(n) && any(!is.finite(n) | n != nsim))) return(NA_real_)
+      max(x)
+    }
+    worst_mod <- complete_max(sub$type1_model_based, sub$n_nonmissing_model_based)
+    worst_sand <- complete_max(sub$type1_sandwich, sub$n_nonmissing_sandwich)
     data.frame(
       method = unique(sub$method)[1],
       lambda = lam,
@@ -372,6 +397,10 @@ make_drift_set_from_values <- function(drift_hr_values,
 #' \eqn{\theta_0 = 0}), records the model-based and sandwich rejection
 #' rates, and selects the largest lambda whose worst-case rejection
 #' rate over the drift set does not exceed \code{alpha_cal}.
+#' Missing statistics are excluded from descriptive rejection rates, but
+#' a candidate with incomplete results is ineligible for the affected
+#' inference type. Fitting failures generate a diagnostic warning; if
+#' both inference types have no usable results at a drift, calibration stops.
 #'
 #' @param method One of \code{"Li"}, \code{"P1"}, \code{"P2"},
 #'   \code{"P3"}, \code{"P4"}.
@@ -506,7 +535,7 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
         keep_sand <- current_summary$worst_type1_sandwich    <= alpha_cal
       }
 
-      keep <- keep_mod | keep_sand
+      keep <- (!is.na(keep_mod) & keep_mod) | (!is.na(keep_sand) & keep_sand)
       active_lambdas <- current_summary$lambda[
         keep & current_summary$lambda %in% active_lambdas
       ]

@@ -73,6 +73,10 @@ replicates under each drift value in \code{drift_set} (with
 \eqn{\theta_0 = 0}), records the model-based and sandwich rejection
 rates, and selects the largest lambda whose worst-case rejection
 rate over the drift set does not exceed \code{alpha_cal}.
+Missing statistics are excluded from descriptive rejection rates, but
+a candidate with incomplete results is ineligible for the affected
+inference type. Fitting failures generate a diagnostic warning; if
+both inference types have no usable results at a drift, calibration stops.
 }
 \examples{
 \donttest{
