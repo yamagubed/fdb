@@ -39,8 +39,8 @@ calibrate_lambda_grid_two_stage(method = c("Li", "P1", "P2", "P3", "P4"),
 \item{lambda_grid_coarse}{Initial coarse lambda grid.}
 \item{scenario_base}{A scenario list.}
 \item{drift_set_cal}{Reduced drift set for calibration.}
-\item{drift_set_confirm}{Wider drift set for confirmation (defaults
-  to \code{NULL}, which disables confirmation).}
+\item{drift_set_confirm}{Deprecated for final lambda selection; retained
+  for backward compatibility.}
 \item{nsim_cal}{Replicates per drift value in the calibration stages.}
 \item{nsim_confirm}{Replicates per drift value in the confirmation
   stage.}
@@ -49,11 +49,11 @@ calibrate_lambda_grid_two_stage(method = c("Li", "P1", "P2", "P3", "P4"),
 \item{parallel, ncores}{Parallelization controls.}
 \item{robust, eps, gamma_li, gate_c, gate_tau, gamma_mcp, delta_bounds, n_grid_opt}{
   Same as in \code{\link{calibrate_lambda_grid}}.}
-\item{n_fine}{Number of points in the fine lambda grid.}
+\item{n_fine}{Number of refined points, before adding the original coarse grid.}
 \item{primary_inference}{Which inference type drives the refinement
   (default \code{"sandwich"}).}
 \item{confirm_full_drift}{Logical; perform the confirmation stage on
-  \code{drift_set_confirm}.}
+  \code{drift_set_cal}.}
 \item{early_stop_drift, stop_rule, select_rule}{As in
   \code{\link{calibrate_lambda_grid}}.}
 }
@@ -66,6 +66,9 @@ A list with components \code{method}, \code{coarse}, \code{fine},
 Performs a coarse-grid calibration on a reduced drift set
 (\code{drift_set_cal}), refines the grid around the calibrated lambda,
 repeats the fine-grid calibration on \code{drift_set_cal}, and
-optionally confirms the final lambda on a wider drift set
-\code{drift_set_confirm}.
+optionally confirms candidates on the same drift set, \code{drift_set_cal}.
+The fine-stage grid is the union of the original coarse grid and the
+refined points. Smaller candidates are retained for confirmation, even
+if they failed an earlier stage. Selection uses the final stage's results;
+a passing coarse-stage result is never substituted for confirmation.
 }

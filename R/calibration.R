@@ -599,6 +599,10 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
 #' uses \code{drift_set_cal}, not \code{drift_set_confirm}. Thus, the
 #' final selected lambda is calibrated to the drift range specified by
 #' \code{drift_set_cal}.
+#' The fine-stage grid is the union of the original coarse grid and the
+#' refined points. Smaller candidates are retained for confirmation, even
+#' if they failed an earlier stage. Selection uses the final stage's results;
+#' a passing coarse-stage result is never substituted for confirmation.
 #'
 #' @param method One of \code{"Li"}, \code{"P1"}, \code{"P2"},
 #' \code{"P3"}, \code{"P4"}.
@@ -615,7 +619,7 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
 #' @param rho_mcp MCP transition fraction in (0, 1), default 0.1.
 #' @param robust,eps,gamma_li,gate_c,gate_tau,gamma_mcp,delta_bounds,n_grid_opt
 #' Same as in \code{\link{calibrate_lambda_grid}}.
-#' @param n_fine Number of points in the fine lambda grid.
+#' @param n_fine Number of refined points, before adding the original coarse grid.
 #' @param primary_inference Which inference type drives refinement.
 #' @param confirm_full_drift Logical; if \code{TRUE}, perform a confirmation
 #' stage using \code{drift_set_cal}.
@@ -699,6 +703,9 @@ calibrate_lambda_grid_two_stage <- function(
     lambda_star = primary_star1,
     n_fine = n_fine
   )
+  # Keep the original candidates: fresh simulations can reject every point
+  # near the coarse boundary while smaller lambdas remain acceptable.
+  lambda_grid_fine <- sort(unique(c(lambda_grid_coarse, lambda_grid_fine)))
 
   # ---------------------------------------------------------------------------
   # Stage 2: fine calibration on the same calibration drift set
