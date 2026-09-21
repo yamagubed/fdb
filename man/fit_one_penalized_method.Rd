@@ -12,9 +12,13 @@ fit_one_penalized_method(dat,
                          delta_bounds = DEFAULT_DELTA_BOUNDS,
                          robust = FALSE,
                          eps = SMOOTH_EPS,
-                         n_grid_opt = DEFAULT_N_GRID_OPT)
+                         n_grid_opt = DEFAULT_N_GRID_OPT,
+  rho_mcp = DEFAULT_RHO_MCP)
 }
 \arguments{
+\item{rho_mcp}{MCP transition fraction in (0, 1). The draft software
+  default is 0.1 and is not a calibrated manuscript value. The transition
+  half-width is rho_mcp * gamma_mcp * lambda_eff.}
 \item{dat}{A data frame conforming to the column conventions of
   \code{\link{simulate_hybrid_cox}}.}
 \item{method}{One of \code{"Li"}, \code{"P1"}, \code{"P2"},

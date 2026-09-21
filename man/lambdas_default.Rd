@@ -5,7 +5,7 @@
 \format{
 A list with elements \code{lambda_li}, \code{gamma_li},
 \code{lambda_p1}, \code{lambda_p2}, \code{gate_c}, \code{gate_tau},
-\code{lambda_p3}, \code{gamma_mcp}, \code{lambda_p4}, and
+\code{lambda_p3}, \code{gamma_mcp}, \code{rho_mcp} (default 0.1), \code{lambda_p4}, and
 \code{delta_bounds}.
 }
 \usage{

@@ -11,14 +11,18 @@ fit_all_methods(dat,
                 delta_bounds = DEFAULT_DELTA_BOUNDS,
                 robust = FALSE,
                 eps = SMOOTH_EPS,
-                n_grid_opt = DEFAULT_N_GRID_OPT)
+                n_grid_opt = DEFAULT_N_GRID_OPT,
+  rho_mcp = DEFAULT_RHO_MCP)
 }
 \arguments{
+\item{rho_mcp}{MCP transition fraction in (0, 1). The draft software
+  default is 0.1 and is not a calibrated manuscript value. The transition
+  half-width is rho_mcp * gamma_mcp * lambda_eff.}
 \item{dat}{A data frame from \code{\link{simulate_hybrid_cox}} or
   conforming to its column conventions.}
 \item{lambda_li, gamma_li}{Tuning for the adaptive lasso method.}
 \item{lambda_p1}{Tuning for the precision-weighted L1 (P1).}
-\item{lambda_p2, gate_c, gate_tau}{Tuning for the smooth evidence-gated
+\item{lambda_p2, gate_c, gate_tau}{Tuning for the smoothed integrated-gate
   L1 (P2).}
 \item{lambda_p3, gamma_mcp}{Tuning for the information-adaptive MCP (P3).}
 \item{lambda_p4}{Tuning for the likelihood-ratio-weighted L1 (P4).}

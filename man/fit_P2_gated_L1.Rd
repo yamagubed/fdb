@@ -1,6 +1,6 @@
 \name{fit_P2_gated_L1}
 \alias{fit_P2_gated_L1}
-\title{Smooth evidence-gated L1 penalty (P2)}
+\title{Smoothed integrated-gate penalty (P2)}
 \usage{
 fit_P2_gated_L1(dat, xnames = NULL, lambda,
                 c = 1.64, tau = 0.25,
@@ -30,7 +30,7 @@ curvature \code{pen_curv_raw}.
 }
 \description{
 Implements
-\deqn{p_\lambda(\delta) = \lambda |\delta| \big[ 1 + \exp((|\delta|/\widehat{SE}(\hat\delta_0) - c)/\tau) \big]^{-1},}
+\deqn{p_{\lambda,\varepsilon}(\delta) = \lambda\int_\varepsilon^{\sqrt{\delta^2+\varepsilon^2}} [1+\exp\{(u/\widehat{SE}(\hat\delta_0)-c)/\tau\}]^{-1}du,}
 which provides a continuous relaxation of test-then-pool procedures
 driven by standardized evidence against commensurability.
 }

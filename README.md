@@ -19,14 +19,26 @@ adaptive lasso comparator of Li et al. (2023):
 | ------------------- | ---------------------------------------------------- | ----------------------------------------------- |
 | `LiAdaptiveLasso`   | \( \lambda |\hat\delta_0|^{-\gamma} |\delta| \)      | Adaptive lasso (Li et al. 2023)                 |
 | `P1_SEScaledL1`     | \( \lambda |\delta| / \widehat{SE}(\hat\delta_0) \)  | Precision-weighted L1                           |
-| `P2_GatedL1`        | \( \lambda |\delta| \cdot g(|\delta|/\widehat{SE}) \)| Smooth evidence-gated L1                        |
+| `P2_GatedL1`        | \( \lambda\int_0^{|\delta|}g(u/\widehat{SE})\,du \)| Smoothed integrated-gate                        |
 | `P3_SEScaledMCP`    | \( MCP(\delta; \lambda/\widehat{SE}, \gamma_{MCP}) \)| Information-adaptive minimax concave penalty    |
 | `P4_LRWeightedL1`   | \( \lambda |\delta| \exp\{-\tfrac{1}{2}LR_0\} \)     | Likelihood-ratio-weighted L1                    |
 
 All penalties operate on a smoothed absolute-value primitive
 \(|\delta|_\varepsilon = \sqrt{\delta^2 + \varepsilon^2}\), so the resulting
 penalized objective is twice differentiable in \(\delta\). This makes plug-in
-sandwich variance estimation straightforward.
+sandwich variance estimation possible as a local plug-in approximation.
+First-stage estimates are held fixed; conditional or unconditional validity
+is not guaranteed. Negative P2/P3 curvature is clipped only for the variance
+calculation; raw curvature remains available as `pen_curv_raw`.
+
+P2 integrates the gate from `eps` to `sqrt(delta^2 + eps^2)`. MCP integrates
+a C1 slope from zero to `sqrt(delta^2 + eps^2) - eps`, smoothing both the
+origin and the flat-tail transition. Set `rho_mcp` in direct fits, calibration,
+or `run_fdb_study`, or in the tuning list passed to `run_simulation`.
+Its software default is 0.1; it is not a calibrated manuscript value.
+Existing function names and method tags are retained for compatibility.
+Both P2 and P3 results and calibrated lambdas from the old definitions
+need recomputation. No-covariate studies are supported with `p = 0`.
 
 ## Installation
 

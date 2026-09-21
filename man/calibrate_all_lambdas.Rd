@@ -28,9 +28,13 @@ calibrate_all_lambdas(lambda_grid,
                       confirm_full_drift = TRUE,
                       early_stop_drift = TRUE,
                       stop_rule = c("point", "upper95"),
-                      select_rule = c("point", "upper95"))
+                      select_rule = c("point", "upper95"),
+  rho_mcp = DEFAULT_RHO_MCP)
 }
 \arguments{
+\item{rho_mcp}{MCP transition fraction in (0, 1). The draft software
+  default is 0.1 and is not a calibrated manuscript value. The transition
+  half-width is rho_mcp * gamma_mcp * lambda_eff.}
 \item{lambda_grid}{Initial (coarse) lambda grid used for all methods.}
 \item{scenario_base}{A scenario list.}
 \item{drift_set}{The full drift set on which to evaluate the final

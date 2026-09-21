@@ -16,7 +16,7 @@ simulate_hybrid_cox(nI1 = 150, nI0 = 150, nE = 300,
 \item{nE}{Number of external control subjects.}
 \item{theta0}{True treatment effect (log hazard ratio).}
 \item{delta0}{True population drift on the log-HR scale.}
-\item{p}{Number of covariates.}
+\item{p}{Number of covariates; use 0 for the no-covariate setting.}
 \item{beta}{Numeric vector of covariate coefficients (length \code{p}).
   Defaults to \code{rep(0.2, p)}.}
 \item{rho}{Equicorrelation of covariates.}

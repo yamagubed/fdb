@@ -22,9 +22,13 @@ calibrate_lambda_grid(method = c("Li", "P1", "P2", "P3", "P4"),
                       n_grid_opt = DEFAULT_N_GRID_OPT,
                       early_stop_drift = FALSE,
                       stop_rule = c("point", "upper95"),
-                      select_rule = c("point", "upper95"))
+                      select_rule = c("point", "upper95"),
+  rho_mcp = DEFAULT_RHO_MCP)
 }
 \arguments{
+\item{rho_mcp}{MCP transition fraction in (0, 1). The draft software
+  default is 0.1 and is not a calibrated manuscript value. The transition
+  half-width is rho_mcp * gamma_mcp * lambda_eff.}
 \item{method}{One of \code{"Li"}, \code{"P1"}, \code{"P2"},
   \code{"P3"}, \code{"P4"}.}
 \item{lambda_grid}{Numeric vector of candidate lambda values.}

@@ -27,9 +27,13 @@ run_fdb_study(scenario_base = scenario_S1,
               eps = SMOOTH_EPS,
               n_grid_opt = DEFAULT_N_GRID_OPT,
               seed = 1,
-              export_dir = NULL)
+              export_dir = NULL,
+  rho_mcp = DEFAULT_RHO_MCP)
 }
 \arguments{
+\item{rho_mcp}{MCP transition fraction in (0, 1). The draft software
+  default is 0.1 and is not a calibrated manuscript value. The transition
+  half-width is rho_mcp * gamma_mcp * lambda_eff.}
 \item{scenario_base}{A scenario list. Defaults to
   \code{\link{scenario_S1}}.}
 \item{drift_hr_range}{Numeric vector of length 2 giving the inclusive

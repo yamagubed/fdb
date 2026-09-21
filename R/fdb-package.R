@@ -31,7 +31,7 @@
 #' \itemize{
 #'   \item \strong{LiAdaptiveLasso}: adaptive lasso (Li et al. 2023).
 #'   \item \strong{P1_SEScaledL1}: precision-weighted L1 penalty.
-#'   \item \strong{P2_GatedL1}: smooth evidence-gated L1 penalty.
+#'   \item \strong{P2_GatedL1}: smoothed integrated-gate penalty.
 #'   \item \strong{P3_SEScaledMCP}: information-adaptive minimax
 #'     concave penalty (MCP).
 #'   \item \strong{P4_LRWeightedL1}: likelihood-ratio-weighted L1
@@ -69,6 +69,9 @@ DEFAULT_DELTA_BOUNDS <- c(-3, 3)
 #' @keywords internal
 #' @noRd
 SMOOTH_EPS <- 1e-3
+
+# Software default; choose and report this value before calibration.
+DEFAULT_RHO_MCP <- 0.1
 
 #' @keywords internal
 #' @noRd

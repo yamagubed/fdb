@@ -21,7 +21,8 @@ fit_one_penalized_method_cached <- function(dat,
                                             delta_bounds = DEFAULT_DELTA_BOUNDS,
                                             robust = FALSE,
                                             eps = SMOOTH_EPS,
-                                            n_grid_opt = DEFAULT_N_GRID_OPT) {
+                                            n_grid_opt = DEFAULT_N_GRID_OPT,
+                                            rho_mcp = DEFAULT_RHO_MCP) {
   method <- match.arg(method)
 
   if (method == "Li") {
@@ -65,7 +66,7 @@ fit_one_penalized_method_cached <- function(dat,
     return(fit_P3_info_MCP(
       dat, xnames,
       lambda = lambda,
-      gamma_mcp = gamma_mcp,
+      gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
       delta_bounds = delta_bounds,
       full_fit = full_fit,
       robust = robust,
@@ -103,6 +104,7 @@ fit_one_penalized_method_cached <- function(dat,
 #' @param gamma_li Exponent for the adaptive lasso weight (Li method).
 #' @param gate_c,gate_tau Threshold and smoothness for the P2 gate.
 #' @param gamma_mcp MCP shape parameter for P3.
+#' @param rho_mcp MCP transition fraction in (0, 1), default 0.1.
 #' @param delta_bounds Optimization interval for \code{delta}.
 #' @param robust Use robust (Lin-Wei) Cox standard errors.
 #' @param eps Smoothing parameter for \eqn{|\delta|_\varepsilon}.
@@ -126,7 +128,8 @@ fit_one_penalized_method <- function(dat,
                                      delta_bounds = DEFAULT_DELTA_BOUNDS,
                                      robust = FALSE,
                                      eps = SMOOTH_EPS,
-                                     n_grid_opt = DEFAULT_N_GRID_OPT) {
+                                     n_grid_opt = DEFAULT_N_GRID_OPT,
+                                     rho_mcp = DEFAULT_RHO_MCP) {
   method <- match.arg(method)
   xnames <- grep("^X\\d+$", names(dat), value = TRUE)
   full_fit <- cox_fit_full(dat, xnames, robust = robust)
@@ -140,7 +143,7 @@ fit_one_penalized_method <- function(dat,
     dat = dat, xnames = xnames, full_fit = full_fit,
     nodelta_fit = nodelta_fit,
     method = method, lambda = lambda, gamma_li = gamma_li,
-    gate_c = gate_c, gate_tau = gate_tau, gamma_mcp = gamma_mcp,
+    gate_c = gate_c, gate_tau = gate_tau, gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
     delta_bounds = delta_bounds, robust = robust, eps = eps,
     n_grid_opt = n_grid_opt
   )
@@ -158,8 +161,9 @@ fit_one_penalized_method <- function(dat,
 #'   \code{\link{simulate_hybrid_cox}}.
 #' @param lambda_li,gamma_li Tuning for the adaptive lasso method.
 #' @param lambda_p1 Tuning for the precision-weighted L1 (P1).
-#' @param lambda_p2,gate_c,gate_tau Tuning for the smooth evidence-gated
+#' @param lambda_p2,gate_c,gate_tau Tuning for the smoothed integrated-gate
 #'   L1 (P2).
+#' @param rho_mcp MCP transition fraction in (0, 1), default 0.1.
 #' @param lambda_p3,gamma_mcp Tuning for the information-adaptive MCP (P3).
 #' @param lambda_p4 Tuning for the likelihood-ratio-weighted L1 (P4).
 #' @param delta_bounds Optimization interval for \code{delta}.
@@ -187,7 +191,8 @@ fit_all_methods <- function(dat,
                             delta_bounds = DEFAULT_DELTA_BOUNDS,
                             robust = FALSE,
                             eps = SMOOTH_EPS,
-                            n_grid_opt = DEFAULT_N_GRID_OPT) {
+                            n_grid_opt = DEFAULT_N_GRID_OPT,
+                            rho_mcp = DEFAULT_RHO_MCP) {
   xnames <- grep("^X\\d+$", names(dat), value = TRUE)
 
   # Cache expensive unpenalized fits
@@ -213,7 +218,7 @@ fit_all_methods <- function(dat,
                               robust = robust, eps = eps,
                               n_grid_opt = n_grid_opt)
   out[[6]] <- fit_P3_info_MCP(dat, xnames, lambda = lambda_p3,
-                              gamma_mcp = gamma_mcp,
+                              gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
                               delta_bounds = delta_bounds,
                               full_fit = full_fit,
                               robust = robust, eps = eps,

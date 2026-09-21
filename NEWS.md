@@ -1,3 +1,13 @@
+# fdb development version
+
+* Replace P2 drift-times-gate with the manuscript integrated-gate penalty.
+* Smooth the MCP origin and flat-tail transition; expose `rho_mcp` (default
+  0.1) through fitting, calibration and study workflows.
+* Match raw analytic curvature to the fitted penalties; retain clipping
+  only in the plug-in variance calculation.
+* Support no-covariate Cox fits and simulation (`p = 0`).
+* Old P2/P3 fits and calibration results require recomputation.
+
 # fdb 0.1.0
 
 * Initial release.

@@ -10,18 +10,20 @@
 # where U(eta) is the Cox partial-likelihood score, e_delta selects the
 # delta coordinate, and p_lambda,eps(.) is the smoothed penalty.
 #
-# A consistent sandwich variance estimator is
+# A local plug-in sandwich approximation is
 #
 #   Var(eta_hat) = A_eps^{-1} * B_hat * A_eps^{-T}
 #
 # with A_eps = I(eta_hat) + p''_lambda,eps(delta_hat) e_delta e_delta^T
-# and B_hat = sum_i U_i(eta_hat) U_i(eta_hat)^T. Below we use the total-
+# and B_hat = sum_i vhat_i(eta_hat) vhat_i(eta_hat)^T. Below we use the total-
 # scale equivalent of this expression to avoid duplicate (1/n) factors.
 #
 # Quantities used to define penalty weights or gates (delta_hat_0,
 # SE(delta_hat_0), LR statistic) are treated as fixed after their
-# first-stage estimation, so the sandwich estimator computed here is
-# conditional on these first-stage quantities.
+# first-stage estimation. This approximation is
+# not guaranteed valid for either conditional or unconditional variance.
+# The vhat_i are subject-level Cox score residuals, not event contributions.
+# Clipping changes the variance calculation only, not the fitted coefficients.
 # ----------------------------------------------------------------------
 
 #' Sandwich standard error for a penalized Cox borrowing estimator
@@ -30,6 +32,9 @@
 #' Cox M-estimator. The Cox information and score residuals are
 #' evaluated at the penalized parameter estimate, and the penalty
 #' curvature is added to the (delta, delta) element of the bread.
+#' First-stage estimates are held fixed; this does not establish conditional
+#' or unconditional variance validity. Clipped curvature modifies the
+#' variance calculation without changing the fitted coefficients.
 #'
 #' @param dat A data frame with columns \code{time}, \code{status},
 #'   \code{T}, \code{Z}, and covariates named in \code{xnames}.
@@ -51,8 +56,8 @@
 #' @export
 compute_sandwich_se <- function(dat, delta_hat, theta_hat, beta_hat,
                                 pen_curv, xnames) {
-  fml_full <- stats::as.formula(paste0("survival::Surv(time, status) ~ T + Z + ",
-                                       paste(xnames, collapse = " + ")))
+  fml_full <- stats::reformulate(c("T", "Z", xnames),
+                                 response = "survival::Surv(time, status)")
 
   eta_hat <- c(theta_hat, delta_hat, beta_hat)
   names(eta_hat) <- c("T", "Z", xnames)
@@ -79,7 +84,7 @@ compute_sandwich_se <- function(dat, delta_hat, theta_hat, beta_hat,
   }
   if (!is.matrix(score_resid)) score_resid <- as.matrix(score_resid)
 
-  # Total-scale meat B_total = sum_i U_i(eta_hat) U_i(eta_hat)^T.
+  # Total-scale meat B_total = sum_i vhat_i(eta_hat) vhat_i(eta_hat)^T.
   B_total <- crossprod(score_resid)
 
   vcov_eval <- tryCatch(stats::vcov(eval_fit), error = function(e) NULL)

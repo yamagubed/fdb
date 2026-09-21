@@ -104,6 +104,7 @@ run_drift_curve <- function(theta0,
 #' @param parallel,ncores Parallelization controls.
 #' @param robust,eps,n_grid_opt Estimation controls.
 #' @param seed RNG seed.
+#' @param rho_mcp MCP transition fraction in (0, 1), default 0.1.
 #' @param export_dir If non-\code{NULL}, write CSV outputs and an RDS
 #'   of metadata to this directory.
 #' @return A list with \code{scenario_base}, \code{drift_hr_range},
@@ -138,7 +139,8 @@ run_fdb_study <- function(
   eps              = SMOOTH_EPS,
   n_grid_opt       = DEFAULT_N_GRID_OPT,
   seed             = 1,
-  export_dir       = NULL
+  export_dir       = NULL,
+  rho_mcp          = DEFAULT_RHO_MCP
 ) {
   cal_stop_rule   <- match.arg(cal_stop_rule)
   cal_select_rule <- match.arg(cal_select_rule)
@@ -161,7 +163,7 @@ run_fdb_study <- function(
     lambda_li = 0.20, gamma_li = 1,
     lambda_p1 = 0.20,
     lambda_p2 = 0.20, gate_c = 1.64, gate_tau = 0.25,
-    lambda_p3 = 0.20, gamma_mcp = 3,
+    lambda_p3 = 0.20, gamma_mcp = 3, rho_mcp = rho_mcp,
     lambda_p4 = 0.20,
     delta_bounds = DEFAULT_DELTA_BOUNDS
   )
@@ -187,6 +189,7 @@ run_fdb_study <- function(
       gate_c            = lambdas_use$gate_c,
       gate_tau          = lambdas_use$gate_tau,
       gamma_mcp         = lambdas_use$gamma_mcp,
+      rho_mcp           = lambdas_use$rho_mcp,
       delta_bounds      = lambdas_use$delta_bounds,
       n_grid_opt        = n_grid_opt,
       two_stage         = two_stage_cal,

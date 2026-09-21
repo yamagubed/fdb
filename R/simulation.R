@@ -16,7 +16,7 @@
 #' @param lambdas A list of tuning parameters with elements
 #'   \code{lambda_li}, \code{gamma_li}, \code{lambda_p1},
 #'   \code{lambda_p2}, \code{gate_c}, \code{gate_tau},
-#'   \code{lambda_p3}, \code{gamma_mcp}, \code{lambda_p4}, and
+#'   \code{lambda_p3}, \code{gamma_mcp}, \code{rho_mcp} (optional, default 0.1), \code{lambda_p4}, and
 #'   \code{delta_bounds}. See \code{\link{lambdas_default}} for an
 #'   example.
 #' @param alpha Nominal one-sided (or two-sided) significance level.
@@ -90,6 +90,7 @@ run_simulation <- function(nsim = 200,
       lambda_p2 = lambdas$lambda_p2, gate_c = lambdas$gate_c,
       gate_tau = lambdas$gate_tau,
       lambda_p3 = lambdas$lambda_p3, gamma_mcp = lambdas$gamma_mcp,
+      rho_mcp = lambdas$rho_mcp %||% DEFAULT_RHO_MCP,
       lambda_p4 = lambdas$lambda_p4,
       delta_bounds = lambdas$delta_bounds %||% DEFAULT_DELTA_BOUNDS,
       robust = robust, eps = eps, n_grid_opt = n_grid_opt

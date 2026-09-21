@@ -32,14 +32,14 @@ scenario_S1 <- list(
 #'
 #' @format A list with elements \code{lambda_li}, \code{gamma_li},
 #'   \code{lambda_p1}, \code{lambda_p2}, \code{gate_c}, \code{gate_tau},
-#'   \code{lambda_p3}, \code{gamma_mcp}, \code{lambda_p4}, and
+#'   \code{lambda_p3}, \code{gamma_mcp}, \code{rho_mcp}, \code{lambda_p4}, and
 #'   \code{delta_bounds}.
 #' @export
 lambdas_default <- list(
   lambda_li = 0.20, gamma_li = 1,
   lambda_p1 = 0.20,
   lambda_p2 = 0.20, gate_c = 1.64, gate_tau = 0.25,
-  lambda_p3 = 0.20, gamma_mcp = 3,
+  lambda_p3 = 0.20, gamma_mcp = 3, rho_mcp = 0.1,
   lambda_p4 = 0.20,
   delta_bounds = c(-2, 2)
 )

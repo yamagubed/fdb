@@ -24,7 +24,7 @@ run_simulation(nsim = 200,
 \item{lambdas}{A list of tuning parameters with elements
   \code{lambda_li}, \code{gamma_li}, \code{lambda_p1},
   \code{lambda_p2}, \code{gate_c}, \code{gate_tau},
-  \code{lambda_p3}, \code{gamma_mcp}, \code{lambda_p4}, and
+  \code{lambda_p3}, \code{gamma_mcp}, \code{rho_mcp} (default 0.1), \code{lambda_p4}, and
   \code{delta_bounds}. See \code{\link{lambdas_default}} for an example.}
 \item{alpha}{Nominal one-sided (or two-sided) significance level.}
 \item{one_sided}{Logical; if \code{TRUE}, rejection corresponds to a

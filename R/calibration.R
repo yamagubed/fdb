@@ -145,7 +145,8 @@ make_drift_set_from_values <- function(drift_hr_values,
                                              delta_bounds,
                                              robust,
                                              eps,
-                                             n_grid_opt) {
+                                             n_grid_opt,
+                                             rho_mcp = DEFAULT_RHO_MCP) {
   xnames <- grep("^X\\d+$", names(dat), value = TRUE)
 
   full_fit <- tryCatch(cox_fit_full(dat, xnames, robust = robust),
@@ -173,7 +174,7 @@ make_drift_set_from_values <- function(drift_hr_values,
         dat = dat, xnames = xnames, full_fit = full_fit,
         nodelta_fit = nodelta_fit,
         method = method, lambda = lam, gamma_li = gamma_li,
-        gate_c = gate_c, gate_tau = gate_tau, gamma_mcp = gamma_mcp,
+        gate_c = gate_c, gate_tau = gate_tau, gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
         delta_bounds = delta_bounds, robust = robust, eps = eps,
         n_grid_opt = n_grid_opt
       ),
@@ -215,7 +216,8 @@ make_drift_set_from_values <- function(drift_hr_values,
                                                gamma_mcp,
                                                delta_bounds,
                                                n_grid_opt,
-                                               cl = NULL) {
+                                               cl = NULL,
+                                               rho_mcp = DEFAULT_RHO_MCP) {
   sc <- scenario_base
   sc$theta0 <- 0
   sc$delta0 <- delta0
@@ -237,7 +239,7 @@ make_drift_set_from_values <- function(drift_hr_values,
       gamma_li = gamma_li,
       gate_c = gate_c,
       gate_tau = gate_tau,
-      gamma_mcp = gamma_mcp,
+      gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
       delta_bounds = delta_bounds,
       robust = robust,
       eps = eps,
@@ -391,6 +393,7 @@ make_drift_set_from_values <- function(drift_hr_values,
 #' @param gamma_li Adaptive lasso exponent.
 #' @param gate_c,gate_tau P2 gate parameters.
 #' @param gamma_mcp MCP shape parameter for P3.
+#' @param rho_mcp MCP transition fraction in (0, 1), default 0.1.
 #' @param delta_bounds Optimization interval for delta.
 #' @param n_grid_opt Coarse-grid points for non-convex objectives.
 #' @param early_stop_drift Logical; if \code{TRUE}, drop lambda values
@@ -437,7 +440,8 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
                                   n_grid_opt = DEFAULT_N_GRID_OPT,
                                   early_stop_drift = FALSE,
                                   stop_rule = c("point", "upper95"),
-                                  select_rule = c("point", "upper95")) {
+                                  select_rule = c("point", "upper95"),
+                                  rho_mcp = DEFAULT_RHO_MCP) {
 
   method <- match.arg(method)
   stop_rule <- match.arg(stop_rule)
@@ -480,7 +484,7 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
       gamma_li = gamma_li,
       gate_c = gate_c,
       gate_tau = gate_tau,
-      gamma_mcp = gamma_mcp,
+      gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
       delta_bounds = delta_bounds,
       n_grid_opt = n_grid_opt,
       cl = cl
@@ -579,6 +583,7 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
 #' @param alpha,alpha_cal Nominal level and calibration threshold.
 #' @param seed RNG seed.
 #' @param parallel,ncores Parallelization controls.
+#' @param rho_mcp MCP transition fraction in (0, 1), default 0.1.
 #' @param robust,eps,gamma_li,gate_c,gate_tau,gamma_mcp,delta_bounds,n_grid_opt
 #' Same as in \code{\link{calibrate_lambda_grid}}.
 #' @param n_fine Number of points in the fine lambda grid.
@@ -618,8 +623,8 @@ calibrate_lambda_grid_two_stage <- function(
     confirm_full_drift = TRUE,
     early_stop_drift = TRUE,
     stop_rule = c("point", "upper95"),
-    select_rule = c("point", "upper95")
-) {
+    select_rule = c("point", "upper95"),
+    rho_mcp = DEFAULT_RHO_MCP) {
   method <- match.arg(method)
   primary_inference <- match.arg(primary_inference)
   stop_rule <- match.arg(stop_rule)
@@ -645,7 +650,7 @@ calibrate_lambda_grid_two_stage <- function(
     gamma_li = gamma_li,
     gate_c = gate_c,
     gate_tau = gate_tau,
-    gamma_mcp = gamma_mcp,
+    gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
     delta_bounds = delta_bounds,
     n_grid_opt = n_grid_opt,
     early_stop_drift = early_stop_drift,
@@ -686,7 +691,7 @@ calibrate_lambda_grid_two_stage <- function(
     gamma_li = gamma_li,
     gate_c = gate_c,
     gate_tau = gate_tau,
-    gamma_mcp = gamma_mcp,
+    gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
     delta_bounds = delta_bounds,
     n_grid_opt = n_grid_opt,
     early_stop_drift = early_stop_drift,
@@ -733,7 +738,7 @@ calibrate_lambda_grid_two_stage <- function(
       gamma_li = gamma_li,
       gate_c = gate_c,
       gate_tau = gate_tau,
-      gamma_mcp = gamma_mcp,
+      gamma_mcp = gamma_mcp, rho_mcp = rho_mcp,
       delta_bounds = delta_bounds,
       n_grid_opt = n_grid_opt,
       early_stop_drift = early_stop_drift,
@@ -810,6 +815,7 @@ calibrate_lambda_grid_two_stage <- function(
 #'   \code{lambda_star} (5 x 2 matrix indexed by method and
 #'   inference), \code{lambda_star_table} (long form), and
 #'   \code{method_calibrations} (per-method full output).
+#' @param rho_mcp MCP transition fraction in (0, 1), default 0.1.
 #' @export
 calibrate_all_lambdas <- function(lambda_grid,
                                   scenario_base,
@@ -837,7 +843,8 @@ calibrate_all_lambdas <- function(lambda_grid,
                                   confirm_full_drift = TRUE,
                                   early_stop_drift = TRUE,
                                   stop_rule = c("point", "upper95"),
-                                  select_rule = c("point", "upper95")) {
+                                  select_rule = c("point", "upper95"),
+                                  rho_mcp = DEFAULT_RHO_MCP) {
   primary_inference <- match.arg(primary_inference)
   stop_rule <- match.arg(stop_rule)
   select_rule <- match.arg(select_rule)
@@ -861,7 +868,7 @@ calibrate_all_lambdas <- function(lambda_grid,
         parallel = parallel, ncores = ncores,
         robust = robust, eps = eps,
         gamma_li = gamma_li, gate_c = gate_c, gate_tau = gate_tau,
-        gamma_mcp = gamma_mcp, delta_bounds = delta_bounds,
+        gamma_mcp = gamma_mcp, rho_mcp = rho_mcp, delta_bounds = delta_bounds,
         n_grid_opt = n_grid_opt, n_fine = n_fine,
         primary_inference = primary_inference,
         confirm_full_drift = confirm_full_drift,
@@ -877,7 +884,7 @@ calibrate_all_lambdas <- function(lambda_grid,
         parallel = parallel, ncores = ncores,
         robust = robust, eps = eps,
         gamma_li = gamma_li, gate_c = gate_c, gate_tau = gate_tau,
-        gamma_mcp = gamma_mcp, delta_bounds = delta_bounds,
+        gamma_mcp = gamma_mcp, rho_mcp = rho_mcp, delta_bounds = delta_bounds,
         n_grid_opt = n_grid_opt,
         early_stop_drift = early_stop_drift,
         stop_rule = stop_rule, select_rule = select_rule

@@ -164,10 +164,10 @@ fit_P1_precision_L1 <- function(dat, xnames = NULL, lambda,
                       extra = list(se_delta = full_fit$se_delta, w = w))
 }
 
-#' Smooth evidence-gated L1 penalty (P2)
+#' Smoothed integrated-gate penalty (P2)
 #'
 #' Implements
-#' \deqn{p_\lambda(\delta) = \lambda |\delta| \big[ 1 + \exp((|\delta|/\widehat{SE}(\hat\delta_0) - c)/\tau) \big]^{-1},}
+#' \deqn{p_{\lambda,\varepsilon}(\delta) = \lambda\int_\varepsilon^{\sqrt{\delta^2+\varepsilon^2}} [1+\exp\{(u/\widehat{SE}(\hat\delta_0)-c)/\tau\}]^{-1}du,}
 #' which provides a continuous relaxation of test-then-pool procedures
 #' driven by standardized evidence against commensurability.
 #'
@@ -192,13 +192,12 @@ fit_P2_gated_L1 <- function(dat, xnames = NULL, lambda,
   if (is.null(full_fit)) {
     full_fit <- cox_fit_full(dat, xnames, robust = robust)
   }
-  se_d <- pmax(full_fit$se_delta, NUMERIC_ZERO)
+  se_d <- full_fit$se_delta
+  validate_gate(lambda, se_d, c, tau, eps)
 
   obj <- function(delta) {
     prof <- cox_fit_profile(dat, delta, xnames, robust = robust)
-    t_stat <- smooth_abs(delta, eps) / se_d
-    g      <- gate_logistic(t_stat, c = c, tau = tau)
-    (-prof$loglik) + lambda * smooth_abs(delta, eps) * g
+    (-prof$loglik) + pen_integrated_gate(delta, lambda, se_d, c, tau, eps)
   }
 
   sol <- optimize_delta(dat, xnames, obj, delta_bounds,
@@ -228,6 +227,11 @@ fit_P2_gated_L1 <- function(dat, xnames = NULL, lambda,
 #'
 #' @inheritParams fit_li_adaptive_lasso
 #' @param gamma_mcp MCP shape parameter (\code{> 1}).
+#' @param rho_mcp MCP transition fraction in (0, 1); h = rho_mcp *
+#'   gamma_mcp * lambda_eff. The software default 0.1 is not calibrated.
+#' @details MCP is smoothed at both the origin and the flat-tail transition
+#'   by integrating the continuously differentiable slope described in the
+#'   manuscript. First-stage quantities, including h, are held fixed.
 #' @param n_grid_opt Number of grid points for the coarse search in
 #'   the non-convex objective.
 #' @return A list of estimates and inference quantities, including the
@@ -244,32 +248,38 @@ fit_P3_info_MCP <- function(dat, xnames = NULL, lambda, gamma_mcp = 3,
                             delta_bounds = DEFAULT_DELTA_BOUNDS,
                             full_fit = NULL, robust = FALSE,
                             eps = SMOOTH_EPS,
-                            n_grid_opt = DEFAULT_N_GRID_OPT) {
+                            n_grid_opt = DEFAULT_N_GRID_OPT,
+                            rho_mcp = DEFAULT_RHO_MCP) {
+  validate_mcp(lambda, gamma_mcp, eps, rho_mcp)
   if (is.null(xnames)) {
     xnames <- grep("^X\\d+$", names(dat), value = TRUE)
   }
   if (is.null(full_fit)) {
     full_fit <- cox_fit_full(dat, xnames, robust = robust)
   }
-  lam_eff <- lambda / pmax(full_fit$se_delta, NUMERIC_ZERO)
+  validate_penalty_scalar(full_fit$se_delta, "se_delta", 0, TRUE)
+  lam_eff <- lambda / full_fit$se_delta
 
   obj <- function(delta) {
     prof <- cox_fit_profile(dat, delta, xnames, robust = robust)
     (-prof$loglik) + pen_MCP(delta, lambda = lam_eff, gamma = gamma_mcp,
-                             eps = eps)
+                             eps = eps, rho = rho_mcp)
   }
 
   sol <- optimize_delta(dat, xnames, obj, delta_bounds,
                        robust = robust, n_grid = n_grid_opt)
 
   pen_curv_raw <- pen_curvature_MCP(sol$delta_hat, lambda_eff = lam_eff,
-                                    gamma_mcp = gamma_mcp, eps = eps)
+                                    gamma_mcp = gamma_mcp, eps = eps,
+                                    rho = rho_mcp)
   pen_curv <- stabilize_curvature(pen_curv_raw)
 
   build_method_result("P3_SEScaledMCP", sol, dat, xnames, pen_curv,
                       extra = list(se_delta = full_fit$se_delta,
                                    lambda_eff = lam_eff,
                                    gamma_mcp = gamma_mcp,
+                                   rho_mcp = rho_mcp,
+                                   h = rho_mcp * gamma_mcp * lam_eff,
                                    pen_curv_raw = pen_curv_raw))
 }
 

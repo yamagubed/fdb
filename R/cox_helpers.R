@@ -17,9 +17,8 @@
 #' @keywords internal
 #' @noRd
 cox_fit_profile <- function(dat, delta, xnames, robust = FALSE) {
-  fml <- stats::as.formula(paste0("survival::Surv(time, status) ~ T + ",
-                                  paste(xnames, collapse = " + "),
-                                  " + offset(off)"))
+  fml <- stats::reformulate(c("T", xnames, "offset(off)"),
+                            response = "survival::Surv(time, status)")
   dat$off <- delta * dat$Z
   fit <- survival::coxph(fml, data = dat, ties = "efron", robust = robust)
   s <- summary(fit)
@@ -48,8 +47,8 @@ cox_fit_profile <- function(dat, delta, xnames, robust = FALSE) {
 #' @keywords internal
 #' @noRd
 cox_fit_full <- function(dat, xnames, robust = FALSE) {
-  fml <- stats::as.formula(paste0("survival::Surv(time, status) ~ T + Z + ",
-                                  paste(xnames, collapse = " + ")))
+  fml <- stats::reformulate(c("T", "Z", xnames),
+                            response = "survival::Surv(time, status)")
   fit <- survival::coxph(fml, data = dat, ties = "efron", robust = robust)
   s <- summary(fit)
   se_col <- if (robust && "robust se" %in% colnames(s$coef)) {
@@ -78,8 +77,8 @@ cox_fit_full <- function(dat, xnames, robust = FALSE) {
 #' @keywords internal
 #' @noRd
 cox_fit_nodelta <- function(dat, xnames, robust = FALSE) {
-  fml <- stats::as.formula(paste0("survival::Surv(time, status) ~ T + ",
-                                  paste(xnames, collapse = " + ")))
+  fml <- stats::reformulate(c("T", xnames),
+                            response = "survival::Surv(time, status)")
   fit <- survival::coxph(fml, data = dat, ties = "efron", robust = robust)
   s <- summary(fit)
   se_col <- if (robust && "robust se" %in% colnames(s$coef)) {

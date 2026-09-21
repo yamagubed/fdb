@@ -10,6 +10,7 @@
 #' @noRd
 rmvnorm_chol <- function(n, mu, Sigma) {
   p <- length(mu)
+  if (p == 0L) return(matrix(numeric(0), nrow = n, ncol = 0))
   L <- tryCatch(
     chol(Sigma),
     error = function(e) {
@@ -75,7 +76,7 @@ pick_censor_rate <- function(T_event, target_cens = 0.2,
 #' @param theta0 True treatment effect (log hazard ratio).
 #' @param delta0 True population drift (log hazard ratio for external vs.
 #'   internal controls).
-#' @param p Number of covariates.
+#' @param p Number of covariates; use 0 for the no-covariate setting.
 #' @param beta Numeric vector of covariate coefficients (length \code{p}).
 #'   Defaults to \code{rep(0.2, p)}.
 #' @param rho Equicorrelation of covariates.
@@ -110,7 +111,7 @@ simulate_hybrid_cox <- function(nI1 = 150, nI0 = 150, nE = 300,
                                 target_cens = 0.2) {
   stopifnot(
     nI1 > 0, nI0 > 0, nE > 0,
-    p > 0, rho >= -1, rho <= 1,
+    p >= 0, p == as.integer(p), rho >= -1, rho <= 1,
     length(cov_shift) == p,
     shape > 0, lambda > 0,
     target_cens >= 0, target_cens < 1
@@ -145,7 +146,7 @@ simulate_hybrid_cox <- function(nI1 = 150, nI0 = 150, nE = 300,
   status <- as.integer(T_event <= C)
 
   dat <- data.frame(time = time, status = status, T = T, Z = Z)
-  for (j in 1:p) dat[[paste0("X", j)]] <- X[, j]
+  for (j in seq_len(p)) dat[[paste0("X", j)]] <- X[, j]
 
   list(
     data = dat,
