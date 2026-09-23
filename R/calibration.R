@@ -859,10 +859,14 @@ calibrate_lambda_grid_two_stage <- function(
 #'   stage; \code{NULL} uses the calibration grid.
 #' @param nsim_cal,nsim_confirm Replicates per drift value in
 #'   calibration and confirmation stages.
-#' @param alpha,alpha_cal,seed,parallel,ncores,robust,eps,gamma_li,
-#'   gate_c,gate_tau,gamma_mcp,delta_bounds,n_grid_opt,n_fine,
-#'   primary_inference,confirm_full_drift,early_stop_drift,stop_rule,
-#'   select_rule As in \code{\link{calibrate_lambda_grid_two_stage}}.
+#' @param alpha,alpha_cal,seed,parallel,ncores,robust,eps,gamma_li As in
+#'   \code{\link{calibrate_lambda_grid_two_stage}}.
+#' @param gate_c,gate_tau,gamma_mcp,delta_bounds,n_grid_opt,n_fine As in
+#'   \code{\link{calibrate_lambda_grid_two_stage}}.
+#' @param primary_inference,confirm_full_drift,early_stop_drift As in
+#'   \code{\link{calibrate_lambda_grid_two_stage}}.
+#' @param stop_rule,select_rule As in
+#'   \code{\link{calibrate_lambda_grid_two_stage}}.
 #' @param two_stage Logical; use two-stage calibration if \code{TRUE},
 #'   otherwise single-stage.
 #' @return A list with \code{calibration_table} (long form),

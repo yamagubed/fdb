@@ -18,7 +18,7 @@
   release-preparation pass. Earlier manuscript changes to P2/P3 still require
   recomputation of results from the original penalty definitions.
 
-# fdb development version
+## Manuscript methodology updates
 
 * Replace P2 drift-times-gate with the manuscript integrated-gate penalty.
 * Smooth the MCP origin and flat-tail transition; expose `rho_mcp` (default

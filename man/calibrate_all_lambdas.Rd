@@ -52,9 +52,17 @@ stage; \code{NULL} uses the calibration grid.}
 \item{nsim_cal, nsim_confirm}{Replicates per drift value in
 calibration and confirmation stages.}
 
-\item{alpha, alpha_cal, seed, parallel, ncores, robust, eps, gamma_li, }{gate_c,gate_tau,gamma_mcp,delta_bounds,n_grid_opt,n_fine,
-primary_inference,confirm_full_drift,early_stop_drift,stop_rule,
-select_rule As in \code{\link{calibrate_lambda_grid_two_stage}}.}
+\item{alpha, alpha_cal, seed, parallel, ncores, robust, eps, gamma_li}{As in
+\code{\link{calibrate_lambda_grid_two_stage}}.}
+
+\item{gate_c, gate_tau, gamma_mcp, delta_bounds, n_grid_opt, n_fine}{As in
+\code{\link{calibrate_lambda_grid_two_stage}}.}
+
+\item{primary_inference, confirm_full_drift, early_stop_drift}{As in
+\code{\link{calibrate_lambda_grid_two_stage}}.}
+
+\item{stop_rule, select_rule}{As in
+\code{\link{calibrate_lambda_grid_two_stage}}.}
 
 \item{two_stage}{Logical; use two-stage calibration if \code{TRUE},
 otherwise single-stage.}
