@@ -6,38 +6,35 @@ Authors@R:
     person(given = "Yusuke",
            family = "Yamaguchi",
            role = c("aut", "cre"),
-           email = "yusuke.yamaguchi@example.com")
+           email = "yamagubed@gmail.com")
 Description: Implements a class of likelihood-informed frequentist dynamic
     borrowing methods for hybrid-control survival trials based on penalized
-    Cox partial likelihood estimation, as described in the methodology paper
-    "Frequentist dynamic borrowing via likelihood-informed penalization for
-    hybrid controlled clinical trials". The package implements four
+    Cox partial likelihood estimation. Implements four
     likelihood-informed penalty structures (precision-weighted L1,
     smoothed integrated-gate, information-adaptive minimax concave penalty
     (MCP), and likelihood-ratio-weighted L1), together with the adaptive
     lasso borrowing approach of Li et al. (2023, <doi:10.1002/bimj.202100406>).
-    Variance estimation is supported via standard model-based standard errors
-    and penalized estimating-equation sandwich standard errors with a smoothed
-    absolute-value approximation. Tools for design-stage lambda calibration
+    Provides conditional model-based standard errors and local plug-in
+    sandwich variance approximations, with smoothed penalties. Tools for design-stage lambda calibration
     via simulation, including a two-stage coarse-fine grid search, drift-level
     early stopping, and per-method tuning under both inference types, are also
     provided. A simulation harness for evaluating type I error and statistical
     power across population drift scenarios is included.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
 Depends:
     R (>= 3.6.0)
 Imports:
     survival,
     stats,
-    parallel
+    parallel,
+    utils
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-RoxygenNote: 7.2.3
-URL: https://github.com/yusuke-yamaguchi/fdb
-BugReports: https://github.com/yusuke-yamaguchi/fdb/issues
+URL: https://github.com/yamagubed/fdb
+BugReports: https://github.com/yamagubed/fdb/issues
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

@@ -5,7 +5,7 @@
 #' For each drift value in \code{drift_set}, runs a simulation under
 #' the supplied \code{theta0} (e.g. 0 for type I error, \code{log(0.8)}
 #' for power) and the given tuning parameters, then returns a stacked
-#' summary across drift values. The reference internal-control sample
+#' summary across drift values. The reference internal randomized sample
 #' size used for ESS is taken as \code{nI1 + nI0} from
 #' \code{scenario_base}.
 #'
@@ -20,8 +20,10 @@
 #' @param seed RNG seed (per-drift offsets are added internally).
 #' @param parallel,ncores,robust,eps,n_grid_opt As in
 #'   \code{\link{run_simulation}}.
-#' @return A data frame stacking the per-drift summaries with an added
-#'   \code{driftHR} column.
+#' @param keep_raw Retain replicate estimates. Defaults to \code{FALSE}.
+#' @return By default a data frame of per-drift summaries. With
+#'   \code{keep_raw = TRUE}, a list with \code{summary} and \code{raw}.
+#'   Replicate IDs are unique within each \code{drift_index} and method.
 #' @export
 run_drift_curve <- function(theta0,
                             drift_set,
@@ -34,9 +36,13 @@ run_drift_curve <- function(theta0,
                             ncores = NULL,
                             robust = FALSE,
                             eps = SMOOTH_EPS,
-                            n_grid_opt = DEFAULT_N_GRID_OPT) {
+                            n_grid_opt = DEFAULT_N_GRID_OPT,
+                            keep_raw = FALSE) {
 
+  stopifnot(is.logical(keep_raw), length(keep_raw) == 1L, !is.na(keep_raw),
+            is.numeric(drift_set), length(drift_set) > 0L, all(is.finite(drift_set)))
   out_list <- vector("list", length(drift_set))
+  raw_list <- if (keep_raw) vector("list", length(drift_set)) else NULL
 
   for (k in seq_along(drift_set)) {
     sc        <- scenario_base
@@ -46,7 +52,7 @@ run_drift_curve <- function(theta0,
     simres <- run_simulation(
       nsim = nsim, scenario = sc, lambdas = lambdas,
       alpha = alpha, one_sided = TRUE,
-      seed = seed + 10000L * k,
+      seed = .offset_seed(seed, 10000L * k),
       parallel = parallel, ncores = ncores,
       robust = robust, eps = eps, n_grid_opt = n_grid_opt
     )
@@ -62,9 +68,17 @@ run_drift_curve <- function(theta0,
     tmp$nsim    <- nsim
 
     out_list[[k]] <- tmp
+    if (keep_raw) {
+      raw <- simres$raw
+      raw$driftHR <- exp(sc$delta0)
+      raw$drift_index <- k
+      raw_list[[k]] <- raw
+    }
   }
 
-  do.call(rbind, out_list)
+  summary <- do.call(rbind, out_list)
+  if (keep_raw) return(list(summary = summary, raw = do.call(rbind, raw_list)))
+  summary
 }
 
 #' One-stop wrapper: calibrate lambda, then evaluate type I and power
@@ -95,7 +109,8 @@ run_drift_curve <- function(theta0,
 #' @param nsim_curve Replicates per drift value for the final curves.
 #' @param alpha_cal Calibration threshold (defaults to \code{alpha}).
 #' @param two_stage_cal Use two-stage calibration.
-#' @param confirm_full_drift Run the full-drift confirmation stage.
+#' @param confirm_full_drift Run independent confirmation on the calibration
+#'   drift grid. The wider evaluation grid does not change the calibration target.
 #' @param primary_calibration_inference Which inference type is used
 #'   for tuning during calibration (\code{"sandwich"} or
 #'   \code{"model_based"}).
@@ -105,13 +120,16 @@ run_drift_curve <- function(theta0,
 #' @param robust,eps,n_grid_opt Estimation controls.
 #' @param seed RNG seed.
 #' @param rho_mcp MCP transition fraction in (0, 1), default 0.1.
+#' @param keep_raw Retain replicate estimates in \code{raw_type1} and
+#'   \code{raw_power}, and export an RDS file when \code{export_dir} is set.
 #' @param export_dir If non-\code{NULL}, write CSV outputs and an RDS
 #'   of metadata to this directory.
 #' @return A list with \code{scenario_base}, \code{drift_hr_range},
 #'   \code{drift_set}, \code{drift_set_cal}, \code{alpha},
 #'   \code{alpha_cal}, \code{alt_hr}, \code{lambdas} (final tuning),
 #'   \code{calibration} (calibration output, or \code{NULL}),
-#'   \code{type1_curve}, and \code{power_curve}.
+#'   \code{type1_curve}, \code{power_curve}, \code{raw_type1}, and
+#'   \code{raw_power}. The last two are \code{NULL} unless \code{keep_raw} is true.
 #' @export
 run_fdb_study <- function(
   scenario_base    = scenario_S1,
@@ -140,7 +158,8 @@ run_fdb_study <- function(
   n_grid_opt       = DEFAULT_N_GRID_OPT,
   seed             = 1,
   export_dir       = NULL,
-  rho_mcp          = DEFAULT_RHO_MCP
+  rho_mcp          = DEFAULT_RHO_MCP,
+  keep_raw         = FALSE
 ) {
   cal_stop_rule   <- match.arg(cal_stop_rule)
   cal_select_rule <- match.arg(cal_select_rule)
@@ -175,12 +194,12 @@ run_fdb_study <- function(
       scenario_base     = scenario_base,
       drift_set         = drift_set,
       drift_set_cal     = drift_set_cal,
-      drift_set_confirm = if (confirm_full_drift) drift_set else drift_set_cal,
+      drift_set_confirm = drift_set_cal,
       nsim_cal          = nsim_cal,
       nsim_confirm      = nsim_confirm,
       alpha             = alpha,
       alpha_cal         = alpha_cal,
-      seed              = seed + 100,
+      seed              = .offset_seed(seed, 100),
       parallel          = parallel,
       ncores            = ncores,
       robust            = robust,
@@ -205,9 +224,9 @@ run_fdb_study <- function(
     get_lstar <- function(m, inf) {
       v <- lstar[m, inf]
       if (!is.finite(v)) {
-        warning("Calibration failed for ", m, "/", inf,
-                "; using default lambda = 0.20.")
-        0.20
+        stop("Calibration failed for ", m, "/", inf,
+             ". No uncalibrated fallback is used; revise the candidate grid or design.",
+             call. = FALSE)
       } else {
         v
       }
@@ -224,19 +243,25 @@ run_fdb_study <- function(
     theta0 = 0, drift_set = drift_set,
     scenario_base = scenario_base, lambdas = lambdas_use,
     nsim = nsim_curve, alpha = alpha,
-    seed = seed + 1000,
+    seed = .offset_seed(seed, 1000),
     parallel = parallel, ncores = ncores,
-    robust = robust, eps = eps, n_grid_opt = n_grid_opt
+    robust = robust, eps = eps, n_grid_opt = n_grid_opt, keep_raw = keep_raw
   )
 
   power_curve <- run_drift_curve(
     theta0 = log(alt_hr), drift_set = drift_set,
     scenario_base = scenario_base, lambdas = lambdas_use,
     nsim = nsim_curve, alpha = alpha,
-    seed = seed + 2000,
+    seed = .offset_seed(seed, 2000),
     parallel = parallel, ncores = ncores,
-    robust = robust, eps = eps, n_grid_opt = n_grid_opt
+    robust = robust, eps = eps, n_grid_opt = n_grid_opt, keep_raw = keep_raw
   )
+
+  raw_type1 <- raw_power <- NULL
+  if (keep_raw) {
+    raw_type1 <- type1_curve$raw; type1_curve <- type1_curve$summary
+    raw_power <- power_curve$raw; power_curve <- power_curve$summary
+  }
 
   if (!is.null(export_dir)) {
     if (!dir.exists(export_dir)) dir.create(export_dir, recursive = TRUE)
@@ -279,6 +304,8 @@ run_fdb_study <- function(
                  scenario_base = scenario_base,
                  lambdas_use = lambdas_use)
     saveRDS(meta, file.path(export_dir, "run_metadata.rds"))
+    if (keep_raw) saveRDS(list(type1 = raw_type1, power = raw_power),
+                          file.path(export_dir, "replicate_estimates.rds"))
   }
 
   list(
@@ -292,6 +319,8 @@ run_fdb_study <- function(
     lambdas        = lambdas_use,
     calibration    = calib,
     type1_curve    = type1_curve,
-    power_curve    = power_curve
+    power_curve    = power_curve,
+    raw_type1      = raw_type1,
+    raw_power      = raw_power
   )
 }

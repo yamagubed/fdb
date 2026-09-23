@@ -46,7 +46,7 @@ From a local source build:
 
 ```r
 # install.packages("remotes")
-remotes::install_local("fdb_0.1.0.tar.gz", dependencies = TRUE)
+remotes::install_local("fdb_0.2.0.tar.gz", dependencies = TRUE)
 ```
 
 ## Quick start
@@ -71,7 +71,9 @@ fit_one_penalized_method(sim$data, method = "P1", lambda = 0.2)
 ## Design-stage calibration and operating characteristics
 
 For confirmatory use, the penalty strength \(\lambda\) should be calibrated to
-control type I error under a prespecified set of population drift scenarios:
+target an error-rate threshold over a prespecified drift grid. Finite Monte
+Carlo calibration does not guarantee control between grid points or outside
+that grid:
 
 ```r
 study <- run_fdb_study(
@@ -84,6 +86,7 @@ study <- run_fdb_study(
   nsim_cal        = 500,
   nsim_curve      = 1000,
   parallel        = TRUE,
+  ncores          = 2,
   seed            = 1
 )
 
@@ -106,3 +109,40 @@ study$calibration$lambda_star
 ## License
 
 MIT (see the `LICENSE` file).
+
+## Interpretation and reproducibility
+
+The model-based SE conditions on the estimated drift as a fixed offset and
+can substantially underestimate uncertainty. The sandwich SE is a local
+plug-in approximation holding adaptive weights fixed; nominal coverage is
+not guaranteed. Report observed coverage, bias, RMSE and valid-fit counts.
+An `alpha_cal` threshold above `alpha` permits error inflation relative to
+the nominal test level. ESS is a variance-equivalent gain, not a literal
+number of borrowed controls; negative values indicate a precision loss and
+positive values do not establish low bias.
+
+Calibration never substitutes an uncalibrated default when it fails. Refine
+the prespecified design or candidate grid and repeat confirmation. An explicit
+`drift_set_confirm` is honored by the calibration functions; when omitted,
+confirmation uses the calibration grid. The one-stop study wrapper confirms
+on its calibration grid and evaluates performance on its wider curve grid.
+
+`run_simulation()` always returns replicate estimates in `$raw`. For curves:
+
+```r
+# Larger nsim is needed for scientific conclusions.
+curve <- run_drift_curve(theta0 = 0, drift_set = log(c(1, 1.1)),
+                         scenario_base = scenario_S1, lambdas = lambdas_default,
+                         nsim = 2, keep_raw = TRUE)
+curve$summary
+head(curve$raw)
+```
+
+The default `keep_raw = FALSE` preserves the summary-only curve interface.
+`run_fdb_study(keep_raw = TRUE)` also returns `raw_type1` and `raw_power`.
+Save these with `saveRDS()` for paired ESS uncertainty and normality diagnostics.
+Simulation summaries include `n_valid`, `n_missing`, and Monte Carlo standard
+errors. Check those counts before interpreting rates. Parallel execution is
+opt-in and defaults to two workers. Install the package before starting
+workers; fixed seeds are reproducible for a fixed worker count and environment,
+not necessarily between serial runs and different parallel configurations.

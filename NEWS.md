@@ -1,3 +1,23 @@
+# fdb 0.2.0
+
+* Prepare source for CRAN checks and regenerate help from roxygen comments.
+* Add optional `keep_raw` retention to curve and study workflows.
+* Include valid/missing counts and Monte Carlo standard errors in simulation
+  summaries; keep rows for methods with entirely missing inference results.
+* Stop the study wrapper when calibration fails instead of substituting 0.20.
+* Honor explicit `drift_set_confirm` grids. NULL defaults to the calibration
+  grid. Existing calls with identical calibration/confirmation grids retain
+  their calibration target; calls previously passing a different ignored
+  confirmation grid now use that grid and can produce different tuning.
+* Retain coarse candidates in the fine calibration search.
+* Default parallel runs to two workers, propagate installed library paths,
+  clean up failed cluster initialization, and support NULL seeds in wrappers.
+* Document conditional model-based SEs, approximate sandwich inference,
+  finite-grid calibration, residual undercoverage and signed ESS gains.
+* Penalty formulas and fixed-lambda fitting algorithms are unchanged by this
+  release-preparation pass. Earlier manuscript changes to P2/P3 still require
+  recomputation of results from the original penalty definitions.
+
 # fdb development version
 
 * Replace P2 drift-times-gate with the manuscript integrated-gate penalty.

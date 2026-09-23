@@ -7,93 +7,107 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-# Overview
+## Fit a hybrid-control trial
 
-The `fdb` package implements likelihood-informed frequentist dynamic borrowing
-methods for hybrid-control survival trials. The borrowing strength is governed
-by a single tuning parameter, $\lambda$, acting on a drift parameter $\delta$
-that captures population shift between concurrent and external controls under
-a Cox proportional hazards model.
+`fdb` fits penalized Cox models with a treatment coefficient `theta` and an
+external-versus-concurrent control drift coefficient `delta`. Both are on
+the log hazard-ratio scale. Penalizing drift toward zero introduces borrowing.
 
-This vignette walks through:
-
-1. Simulating a hybrid-control dataset;
-2. Fitting all borrowing methods on a single dataset;
-3. Running a small Monte Carlo study;
-4. Performing design-stage $\lambda$ calibration with the one-stop wrapper.
-
-All chunks below are set to `eval = FALSE` so that the vignette builds quickly
-on CRAN. Run them interactively or with `eval = TRUE` to reproduce.
-
-# 1. Simulate a hybrid-control trial
-
-```{r}
+```{r data}
 library(fdb)
-
-set.seed(1)
-sim <- simulate_hybrid_cox(
-  nI1 = 150, nI0 = 150, nE = 300,
-  theta0 = log(0.8), delta0 = log(1.1),
-  p = 5, beta = rep(0.2, 5)
-)
-head(sim$data)
+set.seed(41)
+dat <- simulate_hybrid_cox(nI1 = 40, nI0 = 40, nE = 80,
+                           theta0 = log(0.8), delta0 = log(1.1), p = 0)$data
+head(dat)
 ```
 
-The simulated data frame has columns `time`, `status`, `T` (treatment
-indicator), `Z` (external-control indicator), and `X1, ..., Xp` (covariates).
+The no-covariate model uses `p = 0`. Direct fitting expects `time`, `status`,
+`T` (treatment indicator), `Z` (external indicator), and optional covariates
+named `X1`, `X2`, and so on.
 
-# 2. Fit all borrowing methods on one dataset
-
-```{r}
-res <- fit_all_methods(
-  sim$data,
-  lambda_li = 0.2, lambda_p1 = 0.2,
-  lambda_p2 = 0.2, lambda_p3 = 0.2, lambda_p4 = 0.2
-)
-res
+```{r fit}
+fit <- fit_one_penalized_method(dat, method = "P1", lambda = 0.2)
+fit[c("method", "theta_hat", "delta_hat", "se_theta", "se_sand")]
 ```
 
-The returned data frame reports both model-based standard errors (`se_theta`)
-and penalized estimating-equation sandwich standard errors (`se_sand`).
+This tuning value illustrates the API; it has not been calibrated.
+`fit_all_methods(dat)` compares internal-only, pooled, Li, and P1--P4 fits.
+P2 uses the integrated gate and P3 uses smoothed MCP. Record `eps`, `rho_mcp`,
+penalty parameters and optimization bounds with results.
 
-# 3. Monte Carlo study under a fixed scenario
+## Interpret uncertainty
 
-```{r}
-sim_out <- run_simulation(
-  nsim = 100, scenario = scenario_S1,
-  lambdas = lambdas_default,
-  alpha = 0.025, seed = 1
-)
-subset(sim_out$summary, inference == "sandwich")
+`se_theta` from the default profiled fit treats estimated drift as a fixed
+offset and can underestimate uncertainty. `se_sand` is a local plug-in
+sandwich approximation holding adaptive first-stage quantities fixed.
+It does not guarantee nominal conditional or unconditional coverage.
+Clipped curvature changes variance calculations, not fitted coefficients.
+Check coverage, bias, RMSE and missing-result counts in the design under study.
+
+## Calibrate a design
+
+The larger examples below are not evaluated when building this vignette.
+Choose drift grids and an error-rate criterion before studying power.
+
+```{r calibration, eval=FALSE}
+cal <- calibrate_lambda_grid_two_stage(
+  method = "P1", lambda_grid_coarse = c(0.02, 0.05, 0.1, 0.2, 0.5),
+  scenario_base = scenario_S1, drift_set_cal = log(c(1, 1.05, 1.1)),
+  nsim_cal = 10000, nsim_confirm = 10000,
+  alpha = 0.025, alpha_cal = 0.04, seed = 81)
+cal$lambda_star
+cal$confirm$details
 ```
 
-# 4. Design-stage $\lambda$ calibration
+Confirmation defaults to the calibration grid. Set `drift_set_confirm`
+explicitly to confirm on a different grid. An `NA` selection means no tested
+candidate qualified; it is not permission to use an uncalibrated default.
+Inspect valid counts and distinguish failed fits from rates above the threshold.
 
-```{r}
-study <- run_fdb_study(
-  scenario_base   = scenario_S1,
-  drift_hr_range  = c(0.8, 1.2),
-  drift_by_hr     = 0.1,
-  alpha           = 0.025,
-  alt_hr          = 0.8,
-  do_calibration  = TRUE,
-  nsim_cal        = 300,
-  nsim_curve      = 500,
-  parallel        = FALSE,
-  seed            = 1
-)
-study$calibration$lambda_star
-study$type1_curve
-study$power_curve
+Finite-grid calibration has Monte Carlo error. A threshold of 0.04 permits
+more rejection than a nominal 0.025 test. Neither a passing point estimate nor
+the pointwise normal-approximation Monte Carlo upper bound establishes
+simultaneous control across a continuum of drift values. The upper bound is
+especially approximate for few or zero rejections; use adequate replication.
+
+## Retain replicate estimates
+
+`run_simulation()` always returns `$raw`. Curve summaries retain estimates
+only when requested:
+
+```{r replicate-workflow, eval=FALSE}
+curve <- run_drift_curve(
+  theta0 = 0, drift_set = log(c(1, 1.1)), scenario_base = scenario_S1,
+  lambdas = lambdas_default, nsim = 10000, seed = 71, keep_raw = TRUE)
+curve$summary
+head(curve$raw)
+saveRDS(curve, "curve_with_replicates.rds")  # Choose your own output path.
 ```
 
-For production runs, use larger `nsim_cal` and `nsim_curve`, and enable
-`parallel = TRUE` together with `ncores`.
+Default lambdas illustrate the workflow and are not calibrated for every
+design. `n_valid` and `n_missing` identify results used in summary rates.
+`mcse_rej_rate` and `mcse_coverage` describe precision conditional on fixed
+tuning; they do not include calibration uncertainty. Pair estimates by method,
+`drift_index` and `sim`. Do not pool drift scenarios for a normality check.
+
+ESS is the variance-equivalent gain
+`NS * (variance_internal / variance_method - 1)`, with `NS = nI1 + nI0` in
+the wrappers. Negative values indicate greater variance than internal-only
+analysis. ESS ignores bias and need not equal a literal number of borrowed
+controls. Paired bootstrap intervals can quantify its Monte Carlo uncertainty.
+
+## Parallel execution
+
+Install the package before using workers. Parallel execution is opt-in and
+defaults to two workers. Set `ncores` explicitly for larger local runs;
+examples and package checks must use at most two. Workers use the package
+library selected by the parent session. Fixed seeds reproduce a fixed
+configuration, but changing worker counts or switching between serial and
+parallel execution can change simulated samples.
+
+Full studies should run outside package checks. Save the package version,
+`sessionInfo()`, tuning, grids, seeds and core count with the results.

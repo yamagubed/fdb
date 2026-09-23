@@ -284,7 +284,7 @@ make_drift_set_from_values <- function(drift_hr_values,
     message <- sprintf(
       "Calibration %s at drift HR %.6g: %d/%d model-based and %d/%d sandwich results missing. %s",
       method, exp(delta0), sum(missing_mod), nrow(raw),
-      sum(missing_sand), nrow(raw), paste(head(reasons, 3), collapse = "; "))
+      sum(missing_sand), nrow(raw), paste(utils::head(reasons, 3), collapse = "; "))
     if (all(missing_mod) && all(missing_sand)) stop(message, call. = FALSE)
     warning(message, call. = FALSE)
   }
@@ -381,10 +381,21 @@ make_drift_set_from_values <- function(drift_hr_values,
 #' @keywords internal
 #' @noRd
 .start_calibration_cluster <- function(ncores = NULL, seed = NULL) {
-  if (is.null(ncores)) ncores <- max(1, parallel::detectCores() - 1)
+  ncores <- .resolve_ncores(ncores)
+  pkg_path <- getNamespaceInfo(asNamespace("fdb"), "path")
+  if (!file.exists(file.path(pkg_path, "Meta", "package.rds"))) {
+    stop("Install fdb before using parallel execution.", call. = FALSE)
+  }
   cl <- parallel::makeCluster(ncores)
-  parallel::clusterEvalQ(cl, library(fdb))
+  initialized <- FALSE
+  on.exit(if (!initialized) parallel::stopCluster(cl), add = TRUE)
+  parallel::clusterCall(cl, function(paths, lib) {
+    .libPaths(paths)
+    library("fdb", lib.loc = lib, character.only = TRUE)
+    NULL
+  }, .libPaths(), dirname(pkg_path))
   if (!is.null(seed)) parallel::clusterSetRNGStream(cl, seed)
+  initialized <- TRUE
   cl
 }
 
@@ -416,7 +427,7 @@ make_drift_set_from_values <- function(drift_hr_values,
 #'   must not exceed this).
 #' @param seed RNG seed.
 #' @param parallel Logical; enable parallel evaluation across replicates.
-#' @param ncores Number of cores for parallel evaluation.
+#' @param ncores Number of workers; \code{NULL} uses two. Checks use at most two.
 #' @param robust Use robust (Lin-Wei) Cox SEs.
 #' @param eps Smoothing parameter.
 #' @param gamma_li Adaptive lasso exponent.
@@ -440,12 +451,13 @@ make_drift_set_from_values <- function(drift_hr_values,
 #'
 #' @examples
 #' \donttest{
+#' # Tiny execution example; use substantially more replicates for calibration.
 #' cal <- calibrate_lambda_grid(method = "P1",
-#'                              lambda_grid = exp(seq(log(0.05), log(1), length.out = 4)),
+#'                              lambda_grid = c(0.05, 0.2),
 #'                              scenario_base = scenario_S1,
 #'                              drift_set = make_drift_set_from_values(
-#'                                c(0.9, 1.0, 1.1)),
-#'                              nsim = 100, seed = 1)
+#'                                c(1.0, 1.1)),
+#'                              nsim = 2, seed = 1)
 #' cal$lambda_star
 #' }
 #' @export
@@ -479,6 +491,13 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
             nsim > 0, alpha > 0, alpha < 1,
             alpha_cal > 0, alpha_cal < 1)
 
+  .validate_count(nsim, "nsim")
+  if (any(!is.finite(lambda_grid)) || any(lambda_grid < 0)) {
+    stop("lambda_grid must contain finite nonnegative values")
+  }
+  if (!is.numeric(drift_set) || !length(drift_set) || any(!is.finite(drift_set))) {
+    stop("drift_set must be a nonempty finite numeric vector")
+  }
   lambda_grid <- sort(unique(lambda_grid))
   drift_set <- sort(unique(drift_set))
 
@@ -593,12 +612,9 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
 #' Performs a coarse-grid calibration on a reduced drift set
 #' (\code{drift_set_cal}), refines the grid around the calibrated
 #' lambda, repeats the fine-grid calibration on \code{drift_set_cal},
-#' and optionally performs a confirmation stage on the same calibration
-#' drift set. The argument \code{confirm_full_drift} is retained for
-#' backward compatibility, but when \code{TRUE} the confirmation stage
-#' uses \code{drift_set_cal}, not \code{drift_set_confirm}. Thus, the
-#' final selected lambda is calibrated to the drift range specified by
-#' \code{drift_set_cal}.
+#' and optionally confirms candidates on \code{drift_set_confirm}. When
+#' this is \code{NULL}, confirmation uses \code{drift_set_cal}. An explicit
+#' confirmation grid is honored and may be wider than the calibration grid.
 #' The fine-stage grid is the union of the original coarse grid and the
 #' refined points. Smaller candidates are retained for confirmation, even
 #' if they failed an earlier stage. Selection uses the final stage's results;
@@ -608,9 +624,9 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
 #' \code{"P3"}, \code{"P4"}.
 #' @param lambda_grid_coarse Initial coarse lambda grid.
 #' @param scenario_base A scenario list.
-#' @param drift_set_cal Drift set used for calibration and confirmation.
-#' @param drift_set_confirm Deprecated for final lambda selection; retained
-#' for backward compatibility.
+#' @param drift_set_cal Drift set used for coarse and fine calibration.
+#' @param drift_set_confirm Confirmation drift grid; \code{NULL} uses
+#' \code{drift_set_cal}.
 #' @param nsim_cal Replicates per drift value in the calibration stages.
 #' @param nsim_confirm Replicates per drift value in the confirmation stage.
 #' @param alpha,alpha_cal Nominal level and calibration threshold.
@@ -622,7 +638,7 @@ calibrate_lambda_grid <- function(method = c("Li", "P1", "P2", "P3", "P4"),
 #' @param n_fine Number of refined points, before adding the original coarse grid.
 #' @param primary_inference Which inference type drives refinement.
 #' @param confirm_full_drift Logical; if \code{TRUE}, perform a confirmation
-#' stage using \code{drift_set_cal}.
+#' stage using \code{drift_set_confirm}, or \code{drift_set_cal} if omitted.
 #' @param early_stop_drift,stop_rule,select_rule As in
 #' \code{\link{calibrate_lambda_grid}}.
 #' @return A list with components \code{method}, \code{coarse},
@@ -663,6 +679,9 @@ calibrate_lambda_grid_two_stage <- function(
   stop_rule <- match.arg(stop_rule)
   select_rule <- match.arg(select_rule)
 
+  .validate_count(n_fine, "n_fine", 2L)
+  if (is.null(drift_set_confirm)) drift_set_confirm <- drift_set_cal
+
   # ---------------------------------------------------------------------------
   # Stage 1: coarse calibration on the user-specified calibration drift set
   # ---------------------------------------------------------------------------
@@ -675,7 +694,7 @@ calibrate_lambda_grid_two_stage <- function(
     nsim = nsim_cal,
     alpha = alpha,
     alpha_cal = alpha_cal,
-    seed = seed + 11,
+    seed = .offset_seed(seed, 11),
     parallel = parallel,
     ncores = ncores,
     robust = robust,
@@ -719,7 +738,7 @@ calibrate_lambda_grid_two_stage <- function(
     nsim = nsim_cal,
     alpha = alpha,
     alpha_cal = alpha_cal,
-    seed = seed + 22,
+    seed = .offset_seed(seed, 22),
     parallel = parallel,
     ncores = ncores,
     robust = robust,
@@ -762,11 +781,11 @@ calibrate_lambda_grid_two_stage <- function(
       method = method,
       lambda_grid = lambda_confirm,
       scenario_base = scenario_base,
-      drift_set = drift_set_cal,
+      drift_set = drift_set_confirm,
       nsim = nsim_confirm,
       alpha = alpha,
       alpha_cal = alpha_cal,
-      seed = seed + 33,
+      seed = .offset_seed(seed, 33),
       parallel = parallel,
       ncores = ncores,
       robust = robust,
@@ -782,8 +801,8 @@ calibrate_lambda_grid_two_stage <- function(
       select_rule = select_rule
     )
 
-    confirm$summary$stage <- "confirm_calibration_drift"
-    confirm$calibration_table$stage <- "confirm_calibration_drift"
+    confirm$summary$stage <- "confirmation_drift"
+    confirm$calibration_table$stage <- "confirmation_drift"
 
     final_stage <- confirm
   }
@@ -833,11 +852,11 @@ calibrate_lambda_grid_two_stage <- function(
 #' @param lambda_grid Initial (coarse) lambda grid used for all
 #'   methods.
 #' @param scenario_base A scenario list.
-#' @param drift_set The full drift set on which to evaluate the final
-#'   confirmation (also used as the default calibration drift set).
+#' @param drift_set Default calibration drift grid when \code{drift_set_cal}
+#'   is omitted.
 #' @param drift_set_cal Reduced drift set for the calibration stages.
 #' @param drift_set_confirm Drift set for the optional confirmation
-#'   stage (defaults to \code{drift_set}).
+#'   stage; \code{NULL} uses the calibration grid.
 #' @param nsim_cal,nsim_confirm Replicates per drift value in
 #'   calibration and confirmation stages.
 #' @param alpha,alpha_cal,seed,parallel,ncores,robust,eps,gamma_li,
@@ -857,7 +876,7 @@ calibrate_all_lambdas <- function(lambda_grid,
                                   scenario_base,
                                   drift_set,
                                   drift_set_cal = NULL,
-                                  drift_set_confirm = drift_set,
+                                  drift_set_confirm = NULL,
                                   nsim_cal = 500,
                                   nsim_confirm = nsim_cal,
                                   alpha = 0.025,
@@ -900,7 +919,7 @@ calibrate_all_lambdas <- function(lambda_grid,
         drift_set_confirm = drift_set_confirm,
         nsim_cal = nsim_cal, nsim_confirm = nsim_confirm,
         alpha = alpha, alpha_cal = alpha_cal,
-        seed = seed + k * 1000,
+        seed = .offset_seed(seed, k * 1000),
         parallel = parallel, ncores = ncores,
         robust = robust, eps = eps,
         gamma_li = gamma_li, gate_c = gate_c, gate_tau = gate_tau,
@@ -916,7 +935,7 @@ calibrate_all_lambdas <- function(lambda_grid,
         method = methods[k], lambda_grid = lambda_grid,
         scenario_base = scenario_base, drift_set = drift_set_cal,
         nsim = nsim_cal, alpha = alpha, alpha_cal = alpha_cal,
-        seed = seed + k * 1000,
+        seed = .offset_seed(seed, k * 1000),
         parallel = parallel, ncores = ncores,
         robust = robust, eps = eps,
         gamma_li = gamma_li, gate_c = gate_c, gate_tau = gate_tau,

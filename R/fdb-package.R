@@ -51,6 +51,39 @@
 #' counting processes: A large sample study. \emph{The Annals of
 #' Statistics} 10(4), 1100-1120.
 #'
+#' @section Inference and calibration:
+#' Model-based standard errors from profiled fits treat the fitted drift as
+#' fixed. Sandwich standard errors are local plug-in approximations holding
+#' first-stage weights fixed; they do not guarantee nominal coverage. Curvature
+#' clipping modifies the variance calculation, not the fitted coefficients.
+#' Calibration targets a prespecified drift grid and threshold, with Monte
+#' Carlo error. It does not establish control between grid points or outside
+#' the grid. Effective sample size is a variance-equivalent gain and can be
+#' negative; it does not account for bias.
+#'
+#' @importFrom stats aggregate
+#' @importFrom stats as.formula
+#' @importFrom stats coef
+#' @importFrom stats optimize
+#' @importFrom stats qnorm
+#' @importFrom stats residuals
+#' @importFrom stats rexp
+#' @importFrom stats rnorm
+#' @importFrom stats runif
+#' @importFrom stats sd
+#' @importFrom stats var
+#' @importFrom stats vcov
+#' @importFrom survival Surv
+#' @importFrom survival coxph
+#' @importFrom survival coxph.control
+#' @importFrom parallel clusterEvalQ
+#' @importFrom parallel clusterSetRNGStream
+#' @importFrom parallel detectCores
+#' @importFrom parallel makeCluster
+#' @importFrom parallel parLapply
+#' @importFrom parallel stopCluster
+#' @importFrom utils sessionInfo
+#' @importFrom utils write.csv
 #' @docType package
 #' @name fdb-package
 #' @aliases fdb
