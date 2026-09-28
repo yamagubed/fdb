@@ -7,7 +7,7 @@
 compute_ess_from_raw(
   raw_df,
   NS,
-  ref_method = "InternalOnly",
+  ref_method = "Internal-only",
   methods_exclude = NULL
 )
 }
@@ -19,7 +19,7 @@ compute_ess_from_raw(
 internal randomized sample size, \code{nI1 + nI0}.}
 
 \item{ref_method}{Name of the reference method (default
-\code{"InternalOnly"}).}
+\code{"Internal-only"}).}
 
 \item{methods_exclude}{Optional character vector of methods to
 exclude from the output.}

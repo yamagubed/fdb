@@ -42,16 +42,17 @@ internal helper). If \code{NULL}, the fit is computed.}
 the non-convex objective.}
 
 \item{rho_mcp}{MCP transition fraction in (0, 1); h = rho_mcp *
-gamma_mcp * lambda_eff. The software default 0.1 is not calibrated.}
+gamma_mcp * lambda, in standard-error units. The software default 0.1 is not calibrated.}
 }
 \value{
 A list of estimates and inference quantities, including the
-  effective MCP \code{lambda_eff} and the raw curvature
+  standardized \code{lambda}, origin slope \code{lambda_eff = lambda/se_delta},
+  standardized transition width \code{h}, \code{p3_parameterization}, and the raw curvature
   \code{pen_curv_raw}.
 }
 \description{
 Implements
-\deqn{p_\lambda(\delta) = MCP(\delta;\,\lambda/\widehat{SE}(\hat\delta_0),\,\gamma_{MCP}),}
+\deqn{p_\lambda(\delta) = MCP(\delta/\widehat{SE}(\hat\delta_0);\,\lambda,\,\gamma_{MCP}),}
 where MCP is the minimax concave penalty of Zhang (2010). Reduces
 bias when moderate population drift is present while retaining
 strong shrinkage near \eqn{\delta = 0}.
@@ -59,7 +60,12 @@ strong shrinkage near \eqn{\delta = 0}.
 \details{
 MCP is smoothed at both the origin and the flat-tail transition
   by integrating the continuously differentiable slope described in the
-  manuscript. First-stage quantities, including h, are held fixed.
+  manuscript. The origin smoothing parameter eps remains on the log-hazard-ratio
+  scale. The transition half-width h is on the standardized-drift scale.
+  First-stage quantities are held fixed. This replaces the pre-0.2.2 MCP
+  parameterization and requires new calibration. Grid-assisted optimization
+  includes the origin, initial drift estimate, and both transition boundaries
+  on either side, and refines every detected local minimum.
 }
 \references{
 Zhang, C.-H. (2010). Nearly unbiased variable selection under

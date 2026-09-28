@@ -20,7 +20,7 @@ test_that("run_simulation returns expected structure", {
                   sim_out$summary$inference))
 })
 
-test_that("compute_ess_from_raw produces nonnegative ESS for InternalOnly", {
+test_that("compute_ess_from_raw produces nonnegative ESS for Internal-only", {
   skip_on_cran()
   small_scenario <- list(
     nI1 = 40, nI0 = 40, nE = 80,
@@ -34,8 +34,8 @@ test_that("compute_ess_from_raw produces nonnegative ESS for InternalOnly", {
                             lambdas = lambdas_default,
                             alpha = 0.025, seed = 2)
   ess <- compute_ess_from_raw(sim_out$raw, NS = 80,
-                              ref_method = "InternalOnly")
+                              ref_method = "Internal-only")
   expect_s3_class(ess, "data.frame")
   expect_true("ESS" %in% names(ess))
-  expect_equal(ess$ESS[ess$method == "InternalOnly"], 0)
+  expect_equal(ess$ESS[ess$method == "Internal-only"], 0)
 })

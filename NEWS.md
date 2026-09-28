@@ -1,3 +1,33 @@
+# fdb 0.2.2
+
+
+P3 now applies MCP to `delta / se_delta`, with lambda and gamma defined on
+that standardized scale. The smooth penalty integrates its slope to
+`(sqrt(delta^2 + eps^2) - eps) / se_delta`; `eps` remains in log-HR units.
+The transition half-width is `rho_mcp * gamma_mcp * lambda` in SE units.
+Both derivative chain factors are included in the raw curvature; negative
+curvature is still clipped only for the sandwich bread. The optimizer includes
+transition points and refines all detected local minima for P3.
+
+This is a substantive replacement: recalibrate and reevaluate P3. Previous
+P3 lambdas, estimates, and result files do not describe this method.
+Other penalties and the fixed independent censoring design are unchanged.
+The returned `lambda_eff` is retained as the origin slope `lambda / se_delta`;
+it is no longer the lambda argument supplied to the MCP primitive.
+
+# fdb 0.2.1
+
+* Censoring now uses a fixed exponential rate calculated from the internal
+  population distribution, independent of realized replicate event times.
+  Added calibrate_censor_rate() and optional censor_rate. Target zero yields
+  exactly no censoring. Removed the stochastic per-replicate rate search.
+* Simulation and calibration pass the resolved fixed rate to every replicate.
+  Existing simulation results and calibrated lambdas must not be mixed with
+  results from this revised generator.
+* Fit and simulation method labels now match the manuscript. Short calibration
+  API keys Li/P1/P2/P3/P4 remain supported; method_labels() translates keys and
+  legacy output labels for presentation.
+
 # fdb 0.2.0
 
 * Prepare source for CRAN checks and regenerate help from roxygen comments.

@@ -21,24 +21,24 @@ test_that("All penalized methods run and return required fields", {
 
   fit_li <- fit_li_adaptive_lasso(sim$data, lambda = 0.2)
   expect_true(all(required %in% names(fit_li)))
-  expect_equal(fit_li$method, "LiAdaptiveLasso")
+  expect_equal(fit_li$method, "Adaptive lasso")
 
   fit_p1 <- fit_P1_precision_L1(sim$data, lambda = 0.2)
   expect_true(all(required %in% names(fit_p1)))
-  expect_equal(fit_p1$method, "P1_SEScaledL1")
+  expect_equal(fit_p1$method, "Precision-weighted L1")
 
   fit_p2 <- fit_P2_gated_L1(sim$data, lambda = 0.2)
   expect_true(all(required %in% names(fit_p2)))
-  expect_equal(fit_p2$method, "P2_GatedL1")
+  expect_equal(fit_p2$method, "Integrated-gate")
   expect_true(fit_p2$g_hat >= 0 && fit_p2$g_hat <= 1)
 
   fit_p3 <- fit_P3_info_MCP(sim$data, lambda = 0.2)
   expect_true(all(required %in% names(fit_p3)))
-  expect_equal(fit_p3$method, "P3_SEScaledMCP")
+  expect_equal(fit_p3$method, "Information-adaptive MCP")
 
   fit_p4 <- fit_P4_LRweighted_L1(sim$data, lambda = 0.2)
   expect_true(all(required %in% names(fit_p4)))
-  expect_equal(fit_p4$method, "P4_LRWeightedL1")
+  expect_equal(fit_p4$method, "LR-weighted L1")
   expect_true(is.finite(fit_p4$LR0))
 })
 

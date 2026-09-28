@@ -27,7 +27,7 @@ fit_internal_only <- function(dat, xnames = NULL, robust = FALSE) {
                          robust = robust)
   z <- fit$theta_hat / fit$se_theta
   list(
-    method    = "InternalOnly",
+    method    = "Internal-only",
     theta_hat = fit$theta_hat,
     se_theta  = fit$se_theta,
     se_sand   = fit$se_theta,
@@ -54,7 +54,7 @@ fit_naive_pooled <- function(dat, xnames = NULL, robust = FALSE) {
   fit <- cox_fit_nodelta(dat, xnames, robust = robust)
   z <- fit$theta_hat / fit$se_theta
   list(
-    method    = "NaivePooled",
+    method    = "Naive pooled",
     theta_hat = fit$theta_hat,
     se_theta  = fit$se_theta,
     se_sand   = fit$se_theta,
@@ -121,7 +121,7 @@ fit_li_adaptive_lasso <- function(dat, xnames = NULL, lambda, gamma = 1,
   pen_curv <- pen_curvature_L1(sol$delta_hat, c_lambda = w, eps = eps)
   pen_curv <- stabilize_curvature(pen_curv)
 
-  build_method_result("LiAdaptiveLasso", sol, dat, xnames, pen_curv,
+  build_method_result("Adaptive lasso", sol, dat, xnames, pen_curv,
                       extra = list(w = w,
                                    delta0_hat = delta0_hat,
                                    se_delta   = full_fit$se_delta))
@@ -160,7 +160,7 @@ fit_P1_precision_L1 <- function(dat, xnames = NULL, lambda,
   pen_curv <- pen_curvature_L1(sol$delta_hat, c_lambda = w, eps = eps)
   pen_curv <- stabilize_curvature(pen_curv)
 
-  build_method_result("P1_SEScaledL1", sol, dat, xnames, pen_curv,
+  build_method_result("Precision-weighted L1", sol, dat, xnames, pen_curv,
                       extra = list(se_delta = full_fit$se_delta, w = w))
 }
 
@@ -210,7 +210,7 @@ fit_P2_gated_L1 <- function(dat, xnames = NULL, lambda,
                                          c = c, tau = tau, eps = eps)
   pen_curv <- stabilize_curvature(pen_curv_raw)
 
-  build_method_result("P2_GatedL1", sol, dat, xnames, pen_curv,
+  build_method_result("Integrated-gate", sol, dat, xnames, pen_curv,
                       extra = list(se_delta = full_fit$se_delta,
                                    lambda = lambda, c = c, tau = tau,
                                    g_hat = g_hat,
@@ -220,7 +220,7 @@ fit_P2_gated_L1 <- function(dat, xnames = NULL, lambda,
 #' Information-adaptive minimax concave penalty (P3)
 #'
 #' Implements
-#' \deqn{p_\lambda(\delta) = MCP(\delta;\,\lambda/\widehat{SE}(\hat\delta_0),\,\gamma_{MCP}),}
+#' \deqn{p_\lambda(\delta) = MCP(\delta/\widehat{SE}(\hat\delta_0);\,\lambda,\,\gamma_{MCP}),}
 #' where MCP is the minimax concave penalty of Zhang (2010). Reduces
 #' bias when moderate population drift is present while retaining
 #' strong shrinkage near \eqn{\delta = 0}.
@@ -228,14 +228,20 @@ fit_P2_gated_L1 <- function(dat, xnames = NULL, lambda,
 #' @inheritParams fit_li_adaptive_lasso
 #' @param gamma_mcp MCP shape parameter (\code{> 1}).
 #' @param rho_mcp MCP transition fraction in (0, 1); h = rho_mcp *
-#'   gamma_mcp * lambda_eff. The software default 0.1 is not calibrated.
+#'   gamma_mcp * lambda, in standard-error units. The software default 0.1 is not calibrated.
 #' @details MCP is smoothed at both the origin and the flat-tail transition
 #'   by integrating the continuously differentiable slope described in the
-#'   manuscript. First-stage quantities, including h, are held fixed.
+#'   manuscript. The origin smoothing parameter eps remains on the log-hazard-ratio
+#'   scale. The transition half-width h is on the standardized-drift scale.
+#'   First-stage quantities are held fixed. This replaces the pre-0.2.2 MCP
+#'   parameterization and requires new calibration. Grid-assisted optimization
+#'   includes the origin, initial drift estimate, and both transition boundaries
+#'   on either side, and refines every detected local minimum.
 #' @param n_grid_opt Number of grid points for the coarse search in
 #'   the non-convex objective.
 #' @return A list of estimates and inference quantities, including the
-#'   effective MCP \code{lambda_eff} and the raw curvature
+#'   standardized \code{lambda}, origin slope \code{lambda_eff = lambda/se_delta},
+#'   standardized transition width \code{h}, \code{p3_parameterization}, and the raw curvature
 #'   \code{pen_curv_raw}.
 #'
 #' @references
@@ -262,24 +268,32 @@ fit_P3_info_MCP <- function(dat, xnames = NULL, lambda, gamma_mcp = 3,
 
   obj <- function(delta) {
     prof <- cox_fit_profile(dat, delta, xnames, robust = robust)
-    (-prof$loglik) + pen_MCP(delta, lambda = lam_eff, gamma = gamma_mcp,
-                             eps = eps, rho = rho_mcp)
+    (-prof$loglik) + pen_MCP(delta, lambda = lambda, gamma = gamma_mcp,
+                             eps = eps, rho = rho_mcp, se_delta = full_fit$se_delta)
   }
 
+  # Resolve narrow transition regions even when the regular grid is coarse.
+  b <- gamma_mcp * lambda
+  h <- rho_mcp * b
+  u <- full_fit$se_delta * c(b - h, b, b + h)
+  joins <- sqrt(u * (u + 2 * eps))
+  search_points <- c(0, -eps, eps, full_fit$delta_hat, -joins, joins)
   sol <- optimize_delta(dat, xnames, obj, delta_bounds,
-                       robust = robust, n_grid = n_grid_opt)
+                       robust = robust, n_grid = n_grid_opt, search_points = search_points)
 
-  pen_curv_raw <- pen_curvature_MCP(sol$delta_hat, lambda_eff = lam_eff,
+  pen_curv_raw <- pen_curvature_MCP(sol$delta_hat, lambda = lambda,
                                     gamma_mcp = gamma_mcp, eps = eps,
-                                    rho = rho_mcp)
+                                    rho = rho_mcp, se_delta = full_fit$se_delta)
   pen_curv <- stabilize_curvature(pen_curv_raw)
 
-  build_method_result("P3_SEScaledMCP", sol, dat, xnames, pen_curv,
+  build_method_result("Information-adaptive MCP", sol, dat, xnames, pen_curv,
                       extra = list(se_delta = full_fit$se_delta,
                                    lambda_eff = lam_eff,
+                                   lambda = lambda,
+                                   p3_parameterization = "standardized_drift_v1",
                                    gamma_mcp = gamma_mcp,
                                    rho_mcp = rho_mcp,
-                                   h = rho_mcp * gamma_mcp * lam_eff,
+                                   h = h,
                                    pen_curv_raw = pen_curv_raw))
 }
 
@@ -318,6 +332,6 @@ fit_P4_LRweighted_L1 <- function(dat, xnames = NULL, lambda,
   pen_curv <- pen_curvature_L1(sol$delta_hat, c_lambda = w, eps = eps)
   pen_curv <- stabilize_curvature(pen_curv)
 
-  build_method_result("P4_LRWeightedL1", sol, dat, xnames, pen_curv,
+  build_method_result("LR-weighted L1", sol, dat, xnames, pen_curv,
                       extra = list(LR0 = LR0, w = w))
 }

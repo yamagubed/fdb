@@ -17,10 +17,10 @@ test_that("drift curves optionally retain paired replicate rows", {
   fun <- run_drift_curve
   env <- new.env(parent = environment(fun)); environment(fun) <- env
   env$run_simulation <- function(scenario, ...) {
-    raw <- data.frame(method = rep(c("InternalOnly", "P2_GatedL1"), each = 3),
+    raw <- data.frame(method = rep(c("Internal-only", "Integrated-gate"), each = 3),
                       sim = rep(1:3, 2), theta_hat = c(1:3, 2:4),
                       theta0 = scenario$theta0, delta0 = scenario$delta0)
-    list(raw = raw, summary = data.frame(method = c("InternalOnly", "P2_GatedL1")))
+    list(raw = raw, summary = data.frame(method = c("Internal-only", "Integrated-gate")))
   }
   sc <- list(nI1 = 10, nI0 = 10)
   a <- fun(0, c(0, log(1.1)), sc, list(), nsim = 3, seed = NULL)

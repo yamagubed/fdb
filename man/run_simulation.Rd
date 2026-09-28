@@ -25,6 +25,8 @@ run_simulation(
 \code{nI1}, \code{nI0}, \code{nE}, \code{theta0}, \code{delta0},
 \code{p}, \code{beta}, \code{rho}, \code{cov_shift},
 \code{shape}, \code{lambda}, and \code{target_cens}.
+An optional \code{censor_rate} fixes the rate; otherwise it is
+calculated before generating replicates from the internal population.
 See \code{\link{scenario_S1}} for an example.}
 
 \item{lambdas}{A list of tuning parameters with elements

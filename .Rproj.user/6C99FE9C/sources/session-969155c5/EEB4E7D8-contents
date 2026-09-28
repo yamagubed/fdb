@@ -25,28 +25,34 @@ export(run_fdb_study)
 export(run_simulation)
 export(scenario_S1)
 export(simulate_hybrid_cox)
-importFrom(parallel,clusterEvalQ)
-importFrom(parallel,clusterSetRNGStream)
-importFrom(parallel,detectCores)
-importFrom(parallel,makeCluster)
-importFrom(parallel,parLapply)
-importFrom(parallel,stopCluster)
-importFrom(stats,aggregate)
-importFrom(stats,as.formula)
-importFrom(stats,coef)
-importFrom(stats,optimize)
-importFrom(stats,qnorm)
-importFrom(stats,residuals)
-importFrom(stats,rexp)
-importFrom(stats,rnorm)
-importFrom(stats,runif)
-importFrom(stats,sd)
-importFrom(stats,var)
-importFrom(stats,vcov)
-importFrom(survival,Surv)
-importFrom(survival,coxph)
-importFrom(survival,coxph.control)
-importFrom(utils,head)
-importFrom(utils,sessionInfo)
-importFrom(utils,tail)
-importFrom(utils,write.csv)
+importFrom(parallel,
+  clusterEvalQ,
+  clusterSetRNGStream,
+  detectCores,
+  makeCluster,
+  parLapply,
+  stopCluster
+)
+importFrom(stats,
+  aggregate,
+  as.formula,
+  coef,
+  optimize,
+  qnorm,
+  residuals,
+  rexp,
+  rnorm,
+  runif,
+  sd,
+  var,
+  vcov
+)
+importFrom(survival,
+  Surv,
+  coxph,
+  coxph.control
+)
+importFrom(utils,
+  sessionInfo,
+  write.csv
+)

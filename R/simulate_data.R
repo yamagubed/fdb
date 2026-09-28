@@ -36,30 +36,6 @@ sim_weibull_ph <- function(n, lp, shape = 1.2, lambda = 0.02) {
   (-log(u) / (lambda * exp(lp)))^(1 / shape)
 }
 
-#' Bisect for an exponential censoring rate matching a target censoring rate
-#'
-#' @param T_event Vector of event times.
-#' @param target_cens Target censoring proportion.
-#' @param max_rate Upper bound for the bisection.
-#' @param tol Convergence tolerance on censoring proportion.
-#' @param it Maximum bisection iterations.
-#' @return The estimated exponential rate.
-#' @keywords internal
-#' @noRd
-pick_censor_rate <- function(T_event, target_cens = 0.2,
-                             max_rate = 2, tol = 0.01, it = 30) {
-  lo <- 1e-8
-  hi <- max_rate
-  for (k in 1:it) {
-    mid <- (lo + hi) / 2
-    C <- stats::rexp(length(T_event), rate = mid)
-    cens <- mean(C < T_event)
-    if (cens > target_cens) hi <- mid else lo <- mid
-    if (abs(cens - target_cens) < tol) break
-  }
-  (lo + hi) / 2
-}
-
 #' Simulate a hybrid-control Cox proportional hazards dataset
 #'
 #' Generates a randomized trial augmented with an external control arm,
@@ -84,7 +60,11 @@ pick_censor_rate <- function(T_event, target_cens = 0.2,
 #'   (numeric vector of length \code{p}).
 #' @param shape Weibull shape parameter for event-time generation.
 #' @param lambda Baseline scale parameter for event-time generation.
-#' @param target_cens Target right-censoring proportion.
+#' @param target_cens Target censoring proportion among internal subjects.
+#' @param censor_rate Fixed exponential censoring rate. If NULL, calculated
+#'   deterministically from the internal population distribution using
+#'   \code{\link{calibrate_censor_rate}}. Zero gives no censoring.
+#'   An explicit rate overrides the target; realized censoring is random.
 #'
 #' @return A list with components:
 #'   \describe{
@@ -108,7 +88,7 @@ simulate_hybrid_cox <- function(nI1 = 150, nI0 = 150, nE = 300,
                                 rho = 0.0,
                                 cov_shift = rep(0, p),
                                 shape = 1.2, lambda = 0.02,
-                                target_cens = 0.2) {
+                                target_cens = 0.2, censor_rate = NULL) {
   stopifnot(
     nI1 > 0, nI0 > 0, nE > 0,
     p >= 0, p == as.integer(p), rho >= -1, rho <= 1,
@@ -125,6 +105,16 @@ simulate_hybrid_cox <- function(nI1 = 150, nI0 = 150, nE = 300,
     stop("Length of beta (", length(beta), ") must equal p (", p, ")")
   }
 
+  if (p > 1L && rho <= -1 / (p - 1)) {
+    stop("rho must give a positive definite covariate correlation matrix")
+  }
+  if (p > 1L && rho >= 1) stop("rho must be less than 1 when p > 1")
+  if (is.null(censor_rate)) {
+    censor_rate <- calibrate_censor_rate(nI1, nI0, theta0, p, beta, rho,
+                                         shape, lambda, target_cens)
+  }
+  .validate_censor_rate(censor_rate)
+
   Sigma <- matrix(rho, p, p)
   diag(Sigma) <- 1
   X_I1 <- rmvnorm_chol(nI1, mu = rep(0, p), Sigma = Sigma)
@@ -139,8 +129,9 @@ simulate_hybrid_cox <- function(nI1 = 150, nI0 = 150, nE = 300,
   T_event <- sim_weibull_ph(n = nI1 + nI0 + nE, lp = lp,
                             shape = shape, lambda = lambda)
 
-  rate_c <- pick_censor_rate(T_event[Z == 0], target_cens = target_cens)
-  C <- stats::rexp(length(T_event), rate = rate_c)
+  rate_c <- censor_rate
+  C <- if (rate_c == 0) rep(Inf, length(T_event)) else
+    stats::rexp(length(T_event), rate = rate_c)
 
   time   <- pmin(T_event, C)
   status <- as.integer(T_event <= C)
@@ -154,6 +145,7 @@ simulate_hybrid_cox <- function(nI1 = 150, nI0 = 150, nE = 300,
     settings = list(nI1 = nI1, nI0 = nI0, nE = nE, p = p,
                     rho = rho, cov_shift = cov_shift,
                     shape = shape, lambda = lambda,
-                    target_cens = target_cens, rate_c = rate_c)
+                    target_cens = target_cens, rate_c = rate_c,
+                    censoring = "fixed_independent_exponential")
   )
 }

@@ -59,7 +59,7 @@ run_drift_curve <- function(theta0,
 
     NS <- sc$nI1 + sc$nI0
     simres <- add_ess_to_simulation_result(simres, NS = NS,
-                                           ref_method = "InternalOnly")
+                                           ref_method = "Internal-only")
 
     tmp <- simres$summary
     tmp$theta0  <- theta0

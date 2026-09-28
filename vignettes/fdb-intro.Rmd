@@ -36,7 +36,7 @@ fit[c("method", "theta_hat", "delta_hat", "se_theta", "se_sand")]
 
 This tuning value illustrates the API; it has not been calibrated.
 `fit_all_methods(dat)` compares internal-only, pooled, Li, and P1--P4 fits.
-P2 uses the integrated gate and P3 uses smoothed MCP. Record `eps`, `rho_mcp`,
+P2 uses the integrated gate and P3 applies smoothed MCP to standardized drift `delta / se_delta` (since 0.2.2). Its transition width is in SE units, while `eps` is in log-HR units. Previous P3 calibrations must be replaced. Record `eps`, `rho_mcp`,
 penalty parameters and optimization bounds with results.
 
 ## Interpret uncertainty

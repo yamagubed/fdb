@@ -1,7 +1,7 @@
 Package: fdb
 Type: Package
 Title: Frequentist Dynamic Borrowing for Hybrid-Control Survival Trials
-Version: 0.2.0
+Version: 0.2.2
 Authors@R: 
     person(given = "Yusuke",
            family = "Yamaguchi",
@@ -37,4 +37,4 @@ VignetteBuilder: knitr
 URL: https://github.com/yamagubed/fdb
 BugReports: https://github.com/yamagubed/fdb/issues
 Config/testthat/edition: 3
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0

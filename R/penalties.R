@@ -146,23 +146,27 @@ mcp_transition <- function(u, lambda, gamma, rho) {
        slope = 0, derivative = 0)
 }
 
+# P3 integrates the slope over (sqrt(delta^2 + eps^2) - eps) / se_delta.
+# eps stays on the raw log-HR scale; lambda and transition width are standardized.
 pen_MCP <- function(delta, lambda, gamma = 3, eps = SMOOTH_EPS,
-                    rho = DEFAULT_RHO_MCP) {
+                    rho = DEFAULT_RHO_MCP, se_delta = 1) {
   r <- smooth_abs(delta, eps)
-  mcp_transition(delta^2 / (r + eps), lambda, gamma, rho)$value
+  mcp_transition(delta^2 / (r + eps) / se_delta, lambda, gamma, rho)$value
 }
 
 pen_derivative_MCP <- function(delta, lambda, gamma = 3, eps = SMOOTH_EPS,
-                               rho = DEFAULT_RHO_MCP) {
+                               rho = DEFAULT_RHO_MCP, se_delta = 1) {
   r <- smooth_abs(delta, eps)
-  mcp_transition(delta^2 / (r + eps), lambda, gamma, rho)$slope * delta / r
+  mcp_transition(delta^2 / (r + eps) / se_delta, lambda, gamma, rho)$slope *
+    delta / (r * se_delta)
 }
 
-pen_curvature_MCP <- function(delta_hat, lambda_eff, gamma_mcp,
-                              eps = SMOOTH_EPS, rho = DEFAULT_RHO_MCP) {
+pen_curvature_MCP <- function(delta_hat, lambda, gamma_mcp,
+                              eps = SMOOTH_EPS, rho = DEFAULT_RHO_MCP, se_delta = 1) {
   r <- smooth_abs(delta_hat, eps)
-  q <- mcp_transition(delta_hat^2 / (r + eps), lambda_eff, gamma_mcp, rho)
-  q$derivative * (delta_hat / r)^2 + q$slope * smooth_abs_d2(delta_hat, eps)
+  q <- mcp_transition(delta_hat^2 / (r + eps) / se_delta, lambda, gamma_mcp, rho)
+  q$derivative * (delta_hat / r)^2 / se_delta^2 +
+    q$slope * smooth_abs_d2(delta_hat, eps) / se_delta
 }
 
 #' Stabilize a raw curvature value

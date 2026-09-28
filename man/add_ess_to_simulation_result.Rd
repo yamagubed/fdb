@@ -4,7 +4,7 @@
 \alias{add_ess_to_simulation_result}
 \title{Append ESS to a simulation summary}
 \usage{
-add_ess_to_simulation_result(simres, NS, ref_method = "InternalOnly")
+add_ess_to_simulation_result(simres, NS, ref_method = "Internal-only")
 }
 \arguments{
 \item{simres}{Output of \code{\link{run_simulation}}.}
@@ -12,7 +12,7 @@ add_ess_to_simulation_result(simres, NS, ref_method = "InternalOnly")
 \item{NS}{Reference sample-size scale. The study wrappers use the total
 internal randomized sample size, \code{nI1 + nI0}.}
 
-\item{ref_method}{Reference method (default \code{"InternalOnly"}).}
+\item{ref_method}{Reference method (default \code{"Internal-only"}).}
 }
 \value{
 The same \code{simres} list with an \code{ESS} column

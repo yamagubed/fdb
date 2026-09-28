@@ -16,7 +16,8 @@ simulate_hybrid_cox(
   cov_shift = rep(0, p),
   shape = 1.2,
   lambda = 0.02,
-  target_cens = 0.2
+  target_cens = 0.2,
+  censor_rate = NULL
 )
 }
 \arguments{
@@ -45,7 +46,12 @@ Defaults to \code{rep(0.2, p)}.}
 
 \item{lambda}{Baseline scale parameter for event-time generation.}
 
-\item{target_cens}{Target right-censoring proportion.}
+\item{target_cens}{Target censoring proportion among internal subjects.}
+
+\item{censor_rate}{Fixed exponential censoring rate. If NULL, calculated
+deterministically from the internal population distribution using
+\code{\link{calibrate_censor_rate}}. Zero gives no censoring.
+An explicit rate overrides the target; realized censoring is random.}
 }
 \value{
 A list with components:
